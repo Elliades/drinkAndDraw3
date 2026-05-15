@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: drinkanddraw-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: drinkanddraw
+      POSTGRES_PASSWORD: drinkanddraw
+      POSTGRES_DB: drinkanddraw
+    ports:
+      - "5432:5432"
+    volumes:
+      - drinkanddraw-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U drinkanddraw -d drinkanddraw"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  drinkanddraw-pgdata:

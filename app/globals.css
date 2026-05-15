@@ -1,0 +1,70 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Warm cream backgrounds */
+    --background: 40 25% 97%;
+    --foreground: 240 10% 12%;
+    /* Cards pop slightly off the warm bg */
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 12%;
+    /* Vibrant violet as brand primary */
+    --primary: 258 90% 62%;
+    --primary-foreground: 0 0% 100%;
+    /* Light lavender tints for secondary/accent */
+    --secondary: 258 40% 94%;
+    --secondary-foreground: 258 50% 38%;
+    /* Warm muted tones */
+    --muted: 38 20% 93%;
+    --muted-foreground: 240 5% 46%;
+    --accent: 258 40% 94%;
+    --accent-foreground: 258 50% 38%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 8% 88%;
+    --input: 240 8% 88%;
+    --ring: 258 90% 62%;
+    --radius: 0.625rem;
+  }
+
+  .dark {
+    --background: 240 12% 8%;
+    --foreground: 40 20% 95%;
+    --card: 240 12% 11%;
+    --card-foreground: 40 20% 95%;
+    --primary: 258 80% 68%;
+    --primary-foreground: 240 12% 8%;
+    --secondary: 258 20% 18%;
+    --secondary-foreground: 258 60% 82%;
+    --muted: 240 10% 15%;
+    --muted-foreground: 240 6% 54%;
+    --accent: 258 20% 18%;
+    --accent-foreground: 258 60% 82%;
+    --destructive: 0 63% 45%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 10% 18%;
+    --input: 240 10% 18%;
+    --ring: 258 80% 68%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+@keyframes marquee-reverse {
+  from { transform: translateX(-50%); }
+  to   { transform: translateX(0); }
+}
