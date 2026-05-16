@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Button } from "@/ui/button";
+import { crossOriginForImgSrc } from "@/lib/img-cross-origin";
 import { cn } from "@/lib/utils";
 import { detectPose } from "../lib/pose-landmarker";
 import { comparePoses, jointErrorColors } from "../lib/compare-pose";
@@ -67,8 +68,8 @@ export function CompareDrawingPanel({
     async (src: string, _name: string): Promise<void> => {
       // Create a throwaway Image element outside React's render tree.
       const img = new window.Image();
-      // blob: URLs are same-origin — crossOrigin would actually break them.
-      if (!src.startsWith("blob:")) img.crossOrigin = "anonymous";
+      const co = crossOriginForImgSrc(src);
+      if (co) img.crossOrigin = co;
 
       await new Promise<void>((resolve, reject) => {
         img.onload = () => resolve();
@@ -380,7 +381,7 @@ function ComparePane({
           ref={onImgEl}
           src={src}
           alt={alt}
-          {...(src.startsWith("blob:") ? {} : { crossOrigin: "anonymous" as const })}
+          crossOrigin={crossOriginForImgSrc(src)}
           className="h-full w-full object-contain"
         />
         <PoseOverlay

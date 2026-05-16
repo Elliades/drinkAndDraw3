@@ -9,6 +9,8 @@ const config: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   typedRoutes: true,
+  /** Required so Webpack emits valid client chunks for R3F + Three (avoids ChunkLoadError). */
+  transpilePackages: ["three", "@react-three/fiber", "@react-three/drei"],
   images: {
     remotePatterns: [
       {

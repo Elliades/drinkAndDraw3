@@ -58,7 +58,8 @@ export function PoseOverlay({
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.scale(dpr, dpr);
 
-      const drawingActive = mode !== "off" && !!pose;
+      const drawingActive =
+        mode !== "off" && mode !== "anatomy" && !!pose;
 
       if (drawingActive && pose) {
         if (mode === "shape" || mode === "both") {

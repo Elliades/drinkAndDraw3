@@ -7,7 +7,11 @@ export interface Landmark {
 
 export type Pose = Landmark[];
 
-export type OverlayMode = "off" | "stick" | "shape" | "both";
+/** World-space pose (meters), from MediaPipe `worldLandmarks`. */
+export type WorldPose = Landmark[];
+
+/** `anatomy` — 3D mesh over the photo (no 2D canvas overlay). */
+export type OverlayMode = "off" | "stick" | "shape" | "both" | "anatomy";
 
 export type PoseAnalysisStatus =
   | "idle"
@@ -19,5 +23,6 @@ export type PoseAnalysisStatus =
 export interface PoseAnalysis {
   status: PoseAnalysisStatus;
   pose?: Pose;
+  worldPose?: WorldPose;
   error?: string;
 }

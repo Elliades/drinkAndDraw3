@@ -1,16 +1,35 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/ui/button";
+import { crossOriginForImgSrc } from "@/lib/img-cross-origin";
 import { cn } from "@/lib/utils";
 import { detectPose } from "../lib/pose-landmarker";
 import type {
   OverlayMode,
   Pose,
   PoseAnalysis,
+  WorldPose,
 } from "../lib/types";
 import { PoseOverlay } from "./PoseOverlay";
 import { CompareDrawingPanel } from "./CompareDrawingPanel";
+
+const PoseAnatomyOverlay = dynamic(
+  () =>
+    import(
+      /* webpackChunkName: "pose-anatomy-overlay" */
+      "@/features/pose/anatomy/pose-anatomy-overlay"
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-full min-h-[120px] items-center justify-center bg-background/50 text-xs text-muted-foreground">
+        Loading 3D anatomy…
+      </div>
+    ),
+  },
+);
 
 interface Props {
   src: string;
@@ -32,6 +51,8 @@ export function PoseAnalyzer({
   const [analysis, setAnalysis] = useState<PoseAnalysis>({ status: "idle" });
   const [overlayMode, setOverlayMode] = useState<OverlayMode>("off");
   const [compareOpen, setCompareOpen] = useState(false);
+
+  const imgCrossOrigin = useMemo(() => crossOriginForImgSrc(src), [src]);
 
   const imgRef = useRef<HTMLImageElement | null>(null);
   const [imgEl, setImgEl] = useState<HTMLImageElement | null>(null);
@@ -60,12 +81,13 @@ export function PoseAnalyzer({
     try {
       const result = await detectPose(img);
       const pose = result.landmarks?.[0] as Pose | undefined;
+      const worldPose = result.worldLandmarks?.[0] as WorldPose | undefined;
       if (!pose || pose.length === 0) {
         setAnalysis({ status: "no_pose" });
         setOverlayMode("off");
         return;
       }
-      setAnalysis({ status: "ready", pose });
+      setAnalysis({ status: "ready", pose, worldPose });
       setOverlayMode((prev) => (prev === "off" ? "stick" : prev));
     } catch (err) {
       console.error("Pose detection failed:", err);
@@ -77,6 +99,7 @@ export function PoseAnalyzer({
   }, []);
 
   const ready = analysis.status === "ready" && !!analysis.pose;
+  const showAnatomy = ready && overlayMode === "anatomy";
 
   return (
     <div className={cn("space-y-3", className)}>
@@ -89,9 +112,20 @@ export function PoseAnalyzer({
           }}
           src={src}
           alt={alt ?? ""}
-          crossOrigin="anonymous"
-          className="block h-auto w-full object-contain"
+          crossOrigin={imgCrossOrigin}
+          className="relative z-0 block h-auto w-full object-contain"
         />
+        {showAnatomy && (
+          <div
+            className="absolute inset-0 z-[1] min-h-[200px]"
+            aria-label="3D Anatomy Browser"
+          >
+            <PoseAnatomyOverlay
+              worldPose={analysis.worldPose}
+              pose={analysis.pose}
+            />
+          </div>
+        )}
         <PoseOverlay
           target={imgEl}
           pose={analysis.pose}
@@ -136,7 +170,7 @@ export function PoseAnalyzer({
             <div
               className="flex flex-wrap gap-1"
               role="group"
-              aria-label="Pose overlay mode"
+              aria-label="Pose overlay and 3D anatomy"
             >
               <ModeToggle
                 active={overlayMode === "stick"}
@@ -157,6 +191,13 @@ export function PoseAnalyzer({
                 active={overlayMode === "off"}
                 onClick={() => setOverlayMode("off")}
                 label="Hide"
+              />
+              <ModeToggle
+                active={overlayMode === "anatomy"}
+                onClick={() => setOverlayMode("anatomy")}
+                label="3D anatomy"
+                title="3D Anatomy Browser — rigged mesh over the photo (not camera-matched). Default model: public/models/t-pose-female-anatomy.fbx. Override with NEXT_PUBLIC_CHARACTER_MODEL_URL."
+                ariaLabel="3D Anatomy Browser"
               />
             </div>
             <Button
@@ -187,13 +228,23 @@ interface ModeToggleProps {
   active: boolean;
   onClick: () => void;
   label: string;
+  title?: string;
+  ariaLabel?: string;
 }
 
-function ModeToggle({ active, onClick, label }: ModeToggleProps) {
+function ModeToggle({
+  active,
+  onClick,
+  label,
+  title,
+  ariaLabel,
+}: ModeToggleProps) {
   return (
     <button
       type="button"
       aria-pressed={active}
+      aria-label={ariaLabel}
+      title={title}
       onClick={onClick}
       className={cn(
         "rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors",

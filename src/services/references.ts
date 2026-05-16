@@ -1,5 +1,5 @@
 import "server-only";
-import { TagKind, type Prisma } from "@prisma/client";
+import { Prisma, TagKind } from "@prisma/client";
 import { prisma } from "@/db/client";
 import { getStorage } from "@/storage";
 import { normalizeFolderPath } from "@/domain/folders";
@@ -188,11 +188,38 @@ function pickRandom<T>(arr: T[], n: number): T[] {
   return out.slice(0, n);
 }
 
+const HOME_RANDOM_PICKS = 24;
+
+/** Random public approved references (uniform over the library, PostgreSQL `random()`). */
+async function fetchRandomPublicReferencesForHome(limit: number) {
+  const idRows = await prisma.$queryRaw<{ id: string }[]>(
+    Prisma.sql`SELECT id FROM "Reference" WHERE "isPublic" = ${true} AND "isApproved" = ${true} ORDER BY random() LIMIT ${limit}`,
+  );
+  const ids = idRows.map((r) => r.id);
+  if (ids.length === 0) return [];
+  const rows = await prisma.reference.findMany({
+    where: { id: { in: ids } },
+    select: {
+      id: true,
+      title: true,
+      filename: true,
+      folderPath: true,
+      storageKey: true,
+      width: true,
+      height: true,
+      tags: { include: { tag: true } },
+    },
+  });
+  const order = new Map(ids.map((id, i) => [id, i]));
+  rows.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
+  return rows;
+}
+
 /**
  * Builds the home-page sections:
  *  1. "Loved by the community" — sorted by number of favorites
  *  2. Up to `folderCount` randomly-chosen folders (each named after the folder)
- *  3. "Random picks" — a shuffled sample of the whole library
+ *  3. "Random picks" — random rows from the whole public library
  */
 export async function getHomeSections(
   opts: { folderCount?: number } = {},
@@ -214,17 +241,7 @@ export async function getHomeSections(
       orderBy: { _count: { targetId: "desc" } },
       take: 24,
     }),
-    // Random picks: latest 120 shuffled
-    prisma.reference.findMany({
-      where: { isPublic: true, isApproved: true },
-      orderBy: { createdAt: "desc" },
-      take: 120,
-      select: {
-        id: true, title: true, filename: true, folderPath: true,
-        storageKey: true, width: true, height: true,
-        tags: { include: { tag: true } },
-      },
-    }),
+    fetchRandomPublicReferencesForHome(HOME_RANDOM_PICKS),
     // One query per folder
     ...pickedFolders.map((f) =>
       prisma.reference.findMany({
@@ -273,10 +290,9 @@ export async function getHomeSections(
   }
 
   // 4. Attach storage URLs to all groups in parallel
-  const shuffledRandom = pickRandom(randomRefs, 24);
   const [favItems, randomItems, ...folderItems] = await Promise.all([
     attachUrls(favRefs),
-    attachUrls(shuffledRandom),
+    attachUrls(randomRefs),
     ...folderRows.map((rows) => attachUrls(rows)),
   ]);
 
