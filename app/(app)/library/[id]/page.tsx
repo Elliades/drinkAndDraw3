@@ -6,6 +6,7 @@ import { getReferenceById } from "@/services/references";
 import { Badge } from "@/ui/badge";
 import { SocialBar } from "@/ui/social-bar";
 import { CommentSection } from "@/ui/comment-section";
+import { PoseAnalyzerClient } from "@/features/pose/components/PoseAnalyzerClient";
 import { ReferenceAdminPanel } from "./ReferenceAdminPanel";
 
 interface PageProps {
@@ -23,14 +24,7 @@ export default async function ReferenceDetailPage({ params }: PageProps) {
 
   return (
     <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-      <div className="overflow-hidden rounded-lg border border-border bg-card">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={ref.url}
-          alt={ref.title ?? ref.filename}
-          className="h-auto w-full object-contain"
-        />
-      </div>
+      <PoseAnalyzerClient src={ref.url} alt={ref.title ?? ref.filename} />
       <aside className="space-y-4">
         <div>
           <p className="text-xs uppercase tracking-wide text-muted-foreground">

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/ui/button";
+import { PoseAnalyzer } from "@/features/pose/components/PoseAnalyzer";
 
 interface SessionImage {
   id: string;
@@ -162,10 +163,12 @@ export function PracticeSessionClient({ durationSeconds, imageCount, tags }: Pro
           aria-hidden
         />
       </div>
-      <div className="overflow-hidden rounded-lg border border-border bg-card">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={current.url} alt={current.title ?? current.filename} className="mx-auto max-h-[70vh] w-auto object-contain" />
-      </div>
+      <PoseAnalyzer
+        src={current.url}
+        alt={current.title ?? current.filename}
+        resetKey={current.id}
+        className="mx-auto max-w-3xl"
+      />
       <p className="text-center text-xs text-muted-foreground">
         {current.folderPath || "(root)"} · {current.filename}
       </p>
