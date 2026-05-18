@@ -13,7 +13,7 @@ export interface LibraryGridFilters {
   folder?: string;
   tags: string[];
   q?: string;
-  sort: "recent" | "random";
+  sort: "recent" | "random" | "new";
   seed?: string;
 }
 
@@ -31,8 +31,8 @@ function buildFetchUrl(page: number, filters: LibraryGridFilters): string {
   if (filters.folder) sp.set("folder", filters.folder);
   if (filters.q) sp.set("q", filters.q);
   for (const t of filters.tags) sp.append("tag", t);
-  if (filters.sort === "random") {
-    sp.set("sort", "random");
+  if (filters.sort === "random" || filters.sort === "new") {
+    sp.set("sort", filters.sort);
     if (filters.seed) sp.set("seed", filters.seed);
   }
   return `/api/library/references?${sp.toString()}`;
