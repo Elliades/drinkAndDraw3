@@ -7,7 +7,9 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const folder = searchParams.get("folder") ?? undefined;
   const q = searchParams.get("q") ?? undefined;
-  const sort = searchParams.get("sort") === "random" ? "random" : "recent";
+  const sortParam = searchParams.get("sort");
+  const sort =
+    sortParam === "random" ? "random" : sortParam === "new" ? "new" : "recent";
   const seed = searchParams.get("seed") ?? undefined;
   const tags = searchParams.getAll("tag").filter(Boolean);
   const page = Math.max(1, Number.parseInt(searchParams.get("page") ?? "1", 10) || 1);

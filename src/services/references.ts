@@ -12,8 +12,11 @@ export interface ReferenceListFilters {
   search?: string;
   page?: number;
   pageSize?: number;
-  /** When `"random"`, `randomSeed` controls a stable shuffle for pagination. */
-  sort?: "recent" | "random";
+  /**
+   * `"random"` — full public library, stable shuffle via `randomSeed`.
+   * `"new"` — same window as home "New references": today (UTC) activity, else last 14 days; stable shuffle via `randomSeed`.
+   */
+  sort?: "recent" | "random" | "new";
   randomSeed?: string;
 }
 
@@ -36,6 +39,11 @@ export interface ReferenceListResult {
   page: number;
   pageSize: number;
   totalPages: number;
+  /** Set when listing with `sort: "new"` (library + API). */
+  newReferences?: {
+    mode: "today" | "recent";
+    dayLabelUtc: string;
+  };
 }
 
 const DEFAULT_PAGE_SIZE = 24;
@@ -166,9 +174,82 @@ async function listReferencesRandomOrder(
   };
 }
 
+async function listReferencesNewReferencesOrder(
+  filters: ReferenceListFilters,
+): Promise<ReferenceListResult> {
+  const now = new Date();
+  const utcDayStart = startOfUtcCalendarDay(now);
+  const utcDayEnd = endOfUtcCalendarDay(now);
+  const recentSince = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+  const dayLabelUtc = formatUtcMediumDate(utcDayStart);
+
+  const page = Math.max(1, filters.page ?? 1);
+  const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(1, filters.pageSize ?? DEFAULT_PAGE_SIZE));
+  const seed = filters.randomSeed ?? "0";
+  const baseWhere = buildWhere(filters);
+
+  const timeWindowToday: Prisma.ReferenceWhereInput = {
+    OR: [
+      { createdAt: { gte: utcDayStart, lt: utcDayEnd } },
+      { updatedAt: { gte: utcDayStart, lt: utcDayEnd } },
+    ],
+  };
+  const timeWindowRecent: Prisma.ReferenceWhereInput = {
+    OR: [{ createdAt: { gte: recentSince } }, { updatedAt: { gte: recentSince } }],
+  };
+
+  const whereToday: Prisma.ReferenceWhereInput = { AND: [baseWhere, timeWindowToday] };
+  const todayCount = await prisma.reference.count({ where: whereToday });
+  const mode: "today" | "recent" = todayCount > 0 ? "today" : "recent";
+  const effectiveWhere: Prisma.ReferenceWhereInput =
+    mode === "today" ? whereToday : { AND: [baseWhere, timeWindowRecent] };
+
+  const [total, idRows] = await Promise.all([
+    prisma.reference.count({ where: effectiveWhere }),
+    prisma.reference.findMany({ where: effectiveWhere, select: { id: true } }),
+  ]);
+
+  const sortedIds = idRows
+    .map((r) => r.id)
+    .sort((a, b) => md5SortKey(a, seed).localeCompare(md5SortKey(b, seed)));
+
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const slice = sortedIds.slice((page - 1) * pageSize, page * pageSize);
+
+  if (slice.length === 0) {
+    return {
+      items: [],
+      total,
+      page,
+      pageSize,
+      totalPages,
+      newReferences: { mode, dayLabelUtc },
+    };
+  }
+
+  const rows = await prisma.reference.findMany({
+    where: { id: { in: slice } },
+    include: { tags: { include: { tag: true } } },
+  });
+  const order = new Map(slice.map((id, i) => [id, i]));
+  rows.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
+
+  return {
+    items: await attachUrls(rows),
+    total,
+    page,
+    pageSize,
+    totalPages,
+    newReferences: { mode, dayLabelUtc },
+  };
+}
+
 export async function listReferences(filters: ReferenceListFilters): Promise<ReferenceListResult> {
   if (filters.sort === "random") {
     return listReferencesRandomOrder(filters);
+  }
+  if (filters.sort === "new") {
+    return listReferencesNewReferencesOrder(filters);
   }
 
   const page = Math.max(1, filters.page ?? 1);
@@ -433,11 +514,12 @@ export async function getHomeSections(
   const sections: HomeSection[] = [];
 
   if (newRefItems.length > 0) {
+    const newRefSeed = `${Math.floor(Math.random() * 1_000_000_000)}`;
     sections.push({
       id: "new-references",
       title: "New references",
       subtitle: newRefsSubtitle,
-      href: "/library",
+      href: `/library?sort=new&seed=${encodeURIComponent(newRefSeed)}`,
       items: newRefItems,
     });
   }

@@ -32,6 +32,7 @@ function buildLibraryQueryString(params: {
   const tags = params.tag ? (Array.isArray(params.tag) ? params.tag : [params.tag]) : [];
   for (const t of tags) sp.append("tag", t);
   if (params.sort === "random") sp.set("sort", "random");
+  if (params.sort === "new") sp.set("sort", "new");
   if (params.seed !== undefined) sp.set("seed", params.seed);
   const qs = sp.toString();
   return qs ? `?${qs}` : "";
@@ -51,6 +52,8 @@ export default async function LibraryPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const tags = params.tag ? (Array.isArray(params.tag) ? params.tag : [params.tag]) : [];
   const sortRandom = params.sort === "random";
+  const sortNew = params.sort === "new";
+  const sortSpecial = sortRandom || sortNew;
 
   if (params.page && params.page !== "1") {
     const { page: _page, ...rest } = params;
@@ -62,6 +65,11 @@ export default async function LibraryPage({ searchParams }: PageProps) {
     redirect(`/library${buildLibraryQueryString({ ...params, sort: "random", seed })}`);
   }
 
+  if (sortNew && params.seed === undefined) {
+    const seed = `${Math.floor(Math.random() * 1_000_000_000)}`;
+    redirect(`/library${buildLibraryQueryString({ ...params, sort: "new", seed })}`);
+  }
+
   const [result, folders] = await Promise.all([
     listReferences({
       folder: params.folder,
@@ -69,15 +77,20 @@ export default async function LibraryPage({ searchParams }: PageProps) {
       search: params.q,
       page: 1,
       pageSize: 48,
-      sort: sortRandom ? "random" : "recent",
+      sort: sortRandom ? "random" : sortNew ? "new" : "recent",
       randomSeed: params.seed,
     }),
     listFolders(),
   ]);
 
-  const subfolders = sortRandom ? [] : getImmediateSubfolders(folders, params.folder);
+  const subfolders = sortSpecial ? [] : getImmediateSubfolders(folders, params.folder);
   const totalCount = folders.reduce((sum, f) => sum + f.count, 0);
-  const gridKey = [params.folder ?? "", params.q ?? "", tags.join(","), sortRandom ? params.seed : "recent"].join("|");
+  const gridKey = [
+    params.folder ?? "",
+    params.q ?? "",
+    tags.join(","),
+    sortRandom ? `r:${params.seed}` : sortNew ? `n:${params.seed}` : "recent",
+  ].join("|");
 
   return (
     <div className="grid gap-8 lg:grid-cols-[220px_1fr]">
@@ -124,6 +137,16 @@ export default async function LibraryPage({ searchParams }: PageProps) {
                 Random picks — {result.total} image{result.total === 1 ? "" : "s"}
                 {params.folder ? ` in ${params.folder}` : ""}
                 {tags.length > 0 ? ` · tagged ${tags.join(", ")}` : ""}
+              </>
+            ) : sortNew && result.newReferences ? (
+              <>
+                New references — {result.total} image{result.total === 1 ? "" : "s"}
+                {params.folder ? ` in ${params.folder}` : ""}
+                {tags.length > 0 ? ` · tagged ${tags.join(", ")}` : ""}
+                {" · "}
+                {result.newReferences.mode === "today"
+                  ? `Random order of items added or updated on ${result.newReferences.dayLabelUtc} (UTC).`
+                  : `Nothing added or updated today (${result.newReferences.dayLabelUtc}, UTC). Random order of items from the last 14 days.`}
               </>
             ) : (
               <>
@@ -180,7 +203,7 @@ export default async function LibraryPage({ searchParams }: PageProps) {
                     folder: params.folder,
                     tags,
                     q: params.q,
-                    sort: sortRandom ? "random" : "recent",
+                    sort: sortRandom ? "random" : sortNew ? "new" : "recent",
                     seed: params.seed,
                   }}
                 />
