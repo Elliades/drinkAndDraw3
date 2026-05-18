@@ -173,12 +173,17 @@ async function FeedGrid() {
         return (
           <div key={section.id} className="space-y-3">
             {/* Section header */}
-            <div className="flex items-center justify-between px-1">
-              <h2 className="text-base font-semibold tracking-tight">{section.title}</h2>
+            <div className="flex items-start justify-between gap-4 px-1">
+              <div className="min-w-0 space-y-0.5">
+                <h2 className="text-base font-semibold tracking-tight">{section.title}</h2>
+                {section.subtitle ? (
+                  <p className="text-xs text-muted-foreground">{section.subtitle}</p>
+                ) : null}
+              </div>
               {section.href && (
                 <Link
                   href={section.href}
-                  className="flex items-center gap-0.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+                  className="flex shrink-0 items-center gap-0.5 pt-0.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
                 >
                   View all <ChevronRight className="h-3.5 w-3.5" />
                 </Link>

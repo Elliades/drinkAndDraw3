@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import { redirect } from "next/navigation";
 import { FolderOpen, Images } from "lucide-react";
 import { listFolders, listReferences, type FolderNode } from "@/services/references";
-import { Badge } from "@/ui/badge";
 import { Card } from "@/ui/card";
+import { LibraryInfiniteGrid } from "./LibraryInfiniteGrid";
 
 interface PageProps {
   searchParams: Promise<{
@@ -11,10 +12,30 @@ interface PageProps {
     tag?: string | string[];
     q?: string;
     page?: string;
+    sort?: string;
+    seed?: string;
   }>;
 }
 
 export const dynamic = "force-dynamic";
+
+function buildLibraryQueryString(params: {
+  folder?: string;
+  tag?: string | string[];
+  q?: string;
+  sort?: string;
+  seed?: string;
+}): string {
+  const sp = new URLSearchParams();
+  if (params.folder) sp.set("folder", params.folder);
+  if (params.q) sp.set("q", params.q);
+  const tags = params.tag ? (Array.isArray(params.tag) ? params.tag : [params.tag]) : [];
+  for (const t of tags) sp.append("tag", t);
+  if (params.sort === "random") sp.set("sort", "random");
+  if (params.seed !== undefined) sp.set("seed", params.seed);
+  const qs = sp.toString();
+  return qs ? `?${qs}` : "";
+}
 
 function getImmediateSubfolders(allFolders: FolderNode[], currentPath?: string): FolderNode[] {
   if (!currentPath) {
@@ -29,19 +50,37 @@ function getImmediateSubfolders(allFolders: FolderNode[], currentPath?: string):
 export default async function LibraryPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const tags = params.tag ? (Array.isArray(params.tag) ? params.tag : [params.tag]) : [];
-  const page = Number.parseInt(params.page ?? "1", 10) || 1;
+  const sortRandom = params.sort === "random";
+
+  if (params.page && params.page !== "1") {
+    const { page: _page, ...rest } = params;
+    redirect(`/library${buildLibraryQueryString(rest)}`);
+  }
+
+  if (sortRandom && params.seed === undefined) {
+    const seed = `${Math.floor(Math.random() * 1_000_000_000)}`;
+    redirect(`/library${buildLibraryQueryString({ ...params, sort: "random", seed })}`);
+  }
 
   const [result, folders] = await Promise.all([
-    listReferences({ folder: params.folder, tags, search: params.q, page, pageSize: 48 }),
+    listReferences({
+      folder: params.folder,
+      tags,
+      search: params.q,
+      page: 1,
+      pageSize: 48,
+      sort: sortRandom ? "random" : "recent",
+      randomSeed: params.seed,
+    }),
     listFolders(),
   ]);
 
-  const subfolders = getImmediateSubfolders(folders, params.folder);
+  const subfolders = sortRandom ? [] : getImmediateSubfolders(folders, params.folder);
   const totalCount = folders.reduce((sum, f) => sum + f.count, 0);
+  const gridKey = [params.folder ?? "", params.q ?? "", tags.join(","), sortRandom ? params.seed : "recent"].join("|");
 
   return (
     <div className="grid gap-8 lg:grid-cols-[220px_1fr]">
-      {/* Sidebar */}
       <aside className="space-y-1">
         <p className="mb-3 px-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Folders
@@ -76,14 +115,23 @@ export default async function LibraryPage({ searchParams }: PageProps) {
         })}
       </aside>
 
-      {/* Main content */}
       <section className="min-w-0 space-y-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Reference library</h1>
           <p className="text-sm text-muted-foreground">
-            {result.total} image{result.total === 1 ? "" : "s"}
-            {params.folder ? ` in ${params.folder}` : ""}
-            {tags.length > 0 ? ` · tagged ${tags.join(", ")}` : ""}
+            {sortRandom ? (
+              <>
+                Random picks — {result.total} image{result.total === 1 ? "" : "s"}
+                {params.folder ? ` in ${params.folder}` : ""}
+                {tags.length > 0 ? ` · tagged ${tags.join(", ")}` : ""}
+              </>
+            ) : (
+              <>
+                {result.total} image{result.total === 1 ? "" : "s"}
+                {params.folder ? ` in ${params.folder}` : ""}
+                {tags.length > 0 ? ` · tagged ${tags.join(", ")}` : ""}
+              </>
+            )}
           </p>
         </div>
 
@@ -95,7 +143,6 @@ export default async function LibraryPage({ searchParams }: PageProps) {
             </Card>
           ) : (
             <div className="space-y-8">
-              {/* Subfolder cards */}
               {subfolders.length > 0 && (
                 <div>
                   <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -123,83 +170,27 @@ export default async function LibraryPage({ searchParams }: PageProps) {
                 </div>
               )}
 
-              {/* Masonry image grid */}
-              {result.items.length > 0 && (
-                <div className="columns-2 gap-3 sm:columns-3 lg:columns-4 xl:columns-5 [column-fill:_balance]">
-                  {result.items.map((ref) => (
-                    <Link
-                      key={ref.id}
-                      href={{ pathname: `/library/${ref.id}` }}
-                      className="group mb-3 block break-inside-avoid overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md"
-                    >
-                      <div className="overflow-hidden bg-muted">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={ref.url}
-                          alt={ref.title ?? ref.filename}
-                          className="block h-auto w-full transition-transform duration-300 group-hover:scale-[1.03]"
-                          style={
-                            ref.width && ref.height
-                              ? { aspectRatio: `${ref.width}/${ref.height}` }
-                              : undefined
-                          }
-                          loading="lazy"
-                        />
-                      </div>
-                      <div className="p-2.5">
-                        <p className="line-clamp-1 text-xs font-medium">
-                          {ref.title ?? ref.filename}
-                        </p>
-                        {ref.tags.length > 0 ? (
-                          <div className="mt-1.5 flex flex-wrap gap-1">
-                            {ref.tags.slice(0, 2).map((t) => (
-                              <Badge key={t} className="px-1.5 py-0 text-[10px]">
-                                {t}
-                              </Badge>
-                            ))}
-                          </div>
-                        ) : null}
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              )}
+              {result.items.length > 0 ? (
+                <LibraryInfiniteGrid
+                  key={gridKey}
+                  initialItems={result.items}
+                  initialPage={result.page}
+                  totalPages={result.totalPages}
+                  filters={{
+                    folder: params.folder,
+                    tags,
+                    q: params.q,
+                    sort: sortRandom ? "random" : "recent",
+                    seed: params.seed,
+                  }}
+                />
+              ) : null}
             </div>
           )}
         </Suspense>
-
-        {result.totalPages > 1 ? (
-          <Pagination page={result.page} totalPages={result.totalPages} searchParams={params} />
-        ) : null}
       </section>
     </div>
   );
 }
 
-function Pagination({
-  page,
-  totalPages,
-  searchParams,
-}: {
-  page: number;
-  totalPages: number;
-  searchParams: Record<string, string | string[] | undefined>;
-}) {
-  const buildHref = (p: number) => {
-    const query: Record<string, string | string[]> = {};
-    for (const [k, v] of Object.entries(searchParams)) {
-      if (v !== undefined) query[k] = v;
-    }
-    query.page = String(p);
-    return { pathname: "/library" as const, query };
-  };
-  return (
-    <nav className="flex items-center justify-center gap-2 text-sm">
-      {page > 1 ? <Link className="rounded border px-3 py-1 hover:bg-secondary" href={buildHref(page - 1)}>Previous</Link> : null}
-      <span className="text-muted-foreground">
-        Page {page} of {totalPages}
-      </span>
-      {page < totalPages ? <Link className="rounded border px-3 py-1 hover:bg-secondary" href={buildHref(page + 1)}>Next</Link> : null}
-    </nav>
-  );
-}
+

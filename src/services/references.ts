@@ -1,4 +1,5 @@
 import "server-only";
+import { createHash } from "node:crypto";
 import { Prisma, TagKind } from "@prisma/client";
 import { prisma } from "@/db/client";
 import { getStorage } from "@/storage";
@@ -11,6 +12,9 @@ export interface ReferenceListFilters {
   search?: string;
   page?: number;
   pageSize?: number;
+  /** When `"random"`, `randomSeed` controls a stable shuffle for pagination. */
+  sort?: "recent" | "random";
+  randomSeed?: string;
 }
 
 export interface ReferenceListItem {
@@ -108,7 +112,65 @@ async function attachUrls(
   );
 }
 
+function md5SortKey(id: string, seed: string): string {
+  return createHash("md5").update(id + seed).digest("hex");
+}
+
+/**
+ * Deterministic random order (same seed → same order) so pagination is stable.
+ * Loads matching ids into memory; acceptable for typical library sizes.
+ */
+async function listReferencesRandomOrder(
+  filters: ReferenceListFilters,
+): Promise<ReferenceListResult> {
+  const page = Math.max(1, filters.page ?? 1);
+  const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(1, filters.pageSize ?? DEFAULT_PAGE_SIZE));
+  const seed = filters.randomSeed ?? "0";
+  const where = buildWhere(filters);
+
+  const [total, idRows] = await Promise.all([
+    prisma.reference.count({ where }),
+    prisma.reference.findMany({ where, select: { id: true } }),
+  ]);
+
+  const sortedIds = idRows
+    .map((r) => r.id)
+    .sort((a, b) => md5SortKey(a, seed).localeCompare(md5SortKey(b, seed)));
+
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const slice = sortedIds.slice((page - 1) * pageSize, page * pageSize);
+
+  if (slice.length === 0) {
+    return {
+      items: [],
+      total,
+      page,
+      pageSize,
+      totalPages,
+    };
+  }
+
+  const rows = await prisma.reference.findMany({
+    where: { id: { in: slice } },
+    include: { tags: { include: { tag: true } } },
+  });
+  const order = new Map(slice.map((id, i) => [id, i]));
+  rows.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
+
+  return {
+    items: await attachUrls(rows),
+    total,
+    page,
+    pageSize,
+    totalPages,
+  };
+}
+
 export async function listReferences(filters: ReferenceListFilters): Promise<ReferenceListResult> {
+  if (filters.sort === "random") {
+    return listReferencesRandomOrder(filters);
+  }
+
   const page = Math.max(1, filters.page ?? 1);
   const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(1, filters.pageSize ?? DEFAULT_PAGE_SIZE));
   const where = buildWhere(filters);
@@ -174,6 +236,8 @@ export interface HomeSection {
   id: string;
   /** Display title for the marquee row */
   title: string;
+  /** Optional second line under the title (e.g. date context) */
+  subtitle?: string;
   /** Link for a "View all →" action, if applicable */
   href?: string;
   items: ReferenceListItem[];
@@ -189,13 +253,24 @@ function pickRandom<T>(arr: T[], n: number): T[] {
 }
 
 const HOME_RANDOM_PICKS = 24;
+const HOME_NEW_REFS_LIMIT = 24;
 
-/** Random public approved references (uniform over the library, PostgreSQL `random()`). */
-async function fetchRandomPublicReferencesForHome(limit: number) {
-  const idRows = await prisma.$queryRaw<{ id: string }[]>(
-    Prisma.sql`SELECT id FROM "Reference" WHERE "isPublic" = ${true} AND "isApproved" = ${true} ORDER BY random() LIMIT ${limit}`,
-  );
-  const ids = idRows.map((r) => r.id);
+function startOfUtcCalendarDay(d: Date): Date {
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 0, 0, 0, 0));
+}
+
+function endOfUtcCalendarDay(d: Date): Date {
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1, 0, 0, 0, 0));
+}
+
+function formatUtcMediumDate(d: Date): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    dateStyle: "medium",
+    timeZone: "UTC",
+  }).format(d);
+}
+
+async function loadReferencesByIdsInOrder(ids: string[]) {
   if (ids.length === 0) return [];
   const rows = await prisma.reference.findMany({
     where: { id: { in: ids } },
@@ -215,8 +290,51 @@ async function fetchRandomPublicReferencesForHome(limit: number) {
   return rows;
 }
 
+/** Random public approved references (uniform over the library, PostgreSQL `random()`). */
+async function fetchRandomPublicReferencesForHome(limit: number) {
+  const idRows = await prisma.$queryRaw<{ id: string }[]>(
+    Prisma.sql`SELECT id FROM "Reference" WHERE "isPublic" = ${true} AND "isApproved" = ${true} ORDER BY random() LIMIT ${limit}`,
+  );
+  const ids = idRows.map((r) => r.id);
+  return loadReferencesByIdsInOrder(ids);
+}
+
+/** Random public approved references created or updated within a UTC calendar day. */
+async function fetchRandomPublicReferencesForUtcDay(dayStart: Date, dayEnd: Date, limit: number) {
+  const idRows = await prisma.$queryRaw<{ id: string }[]>(
+    Prisma.sql`
+      SELECT id FROM "Reference"
+      WHERE "isPublic" = ${true} AND "isApproved" = ${true}
+      AND (
+        ("createdAt" >= ${dayStart} AND "createdAt" < ${dayEnd})
+        OR ("updatedAt" >= ${dayStart} AND "updatedAt" < ${dayEnd})
+      )
+      ORDER BY random()
+      LIMIT ${limit}
+    `,
+  );
+  const ids = idRows.map((r) => r.id);
+  return loadReferencesByIdsInOrder(ids);
+}
+
+/** Random public approved references created or updated since `since` (inclusive). */
+async function fetchRandomPublicReferencesSince(since: Date, limit: number) {
+  const idRows = await prisma.$queryRaw<{ id: string }[]>(
+    Prisma.sql`
+      SELECT id FROM "Reference"
+      WHERE "isPublic" = ${true} AND "isApproved" = ${true}
+      AND ("createdAt" >= ${since} OR "updatedAt" >= ${since})
+      ORDER BY random()
+      LIMIT ${limit}
+    `,
+  );
+  const ids = idRows.map((r) => r.id);
+  return loadReferencesByIdsInOrder(ids);
+}
+
 /**
  * Builds the home-page sections:
+ *  0. "New references" — random picks from references created or updated today (UTC); falls back to the last 14 days
  *  1. "Loved by the community" — sorted by number of favorites
  *  2. Up to `folderCount` randomly-chosen folders (each named after the folder)
  *  3. "Random picks" — random rows from the whole public library
@@ -226,13 +344,19 @@ export async function getHomeSections(
 ): Promise<HomeSection[]> {
   const { folderCount = 3 } = opts;
 
+  const now = new Date();
+  const utcDayStart = startOfUtcCalendarDay(now);
+  const utcDayEnd = endOfUtcCalendarDay(now);
+  const recentSince = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+  const dayLabel = formatUtcMediumDate(utcDayStart);
+
   // 1. Pick random eligible folders
   const allFolders = await listFolders();
   const eligible = allFolders.filter((f) => f.path && f.count >= 6);
   const pickedFolders = pickRandom(eligible, folderCount);
 
   // 2. Parallel data fetch
-  const [favGroups, randomRefs, ...folderRows] = await Promise.all([
+  const [favGroups, randomRefs, newRefsToday, newRefsRecent, ...folderRows] = await Promise.all([
     // Top-favorited reference IDs
     prisma.favorite.groupBy({
       by: ["targetId"],
@@ -242,6 +366,8 @@ export async function getHomeSections(
       take: 24,
     }),
     fetchRandomPublicReferencesForHome(HOME_RANDOM_PICKS),
+    fetchRandomPublicReferencesForUtcDay(utcDayStart, utcDayEnd, HOME_NEW_REFS_LIMIT),
+    fetchRandomPublicReferencesSince(recentSince, HOME_NEW_REFS_LIMIT),
     // One query per folder
     ...pickedFolders.map((f) =>
       prisma.reference.findMany({
@@ -289,15 +415,32 @@ export async function getHomeSections(
     });
   }
 
+  const newRefsSource = newRefsToday.length > 0 ? newRefsToday : newRefsRecent;
+  const newRefsSubtitle =
+    newRefsToday.length > 0
+      ? `Random picks from references added or updated on ${dayLabel} (UTC).`
+      : `Nothing was added or updated today (${dayLabel}, UTC). Here is a random sample from the last 14 days.`;
+
   // 4. Attach storage URLs to all groups in parallel
-  const [favItems, randomItems, ...folderItems] = await Promise.all([
+  const [favItems, randomItems, newRefItems, ...folderItems] = await Promise.all([
     attachUrls(favRefs),
     attachUrls(randomRefs),
+    attachUrls(newRefsSource),
     ...folderRows.map((rows) => attachUrls(rows)),
   ]);
 
   // 5. Assemble sections — interleave folders between fixed sections
   const sections: HomeSection[] = [];
+
+  if (newRefItems.length > 0) {
+    sections.push({
+      id: "new-references",
+      title: "New references",
+      subtitle: newRefsSubtitle,
+      href: "/library",
+      items: newRefItems,
+    });
+  }
 
   if (favItems.length > 0) {
     sections.push({
@@ -321,10 +464,11 @@ export async function getHomeSections(
   });
 
   if (randomItems.length > 0) {
+    const randomSeed = `${Math.floor(Math.random() * 1_000_000_000)}`;
     sections.push({
       id: "random",
       title: "Random picks",
-      href: "/library",
+      href: `/library?sort=random&seed=${encodeURIComponent(randomSeed)}`,
       items: randomItems,
     });
   }

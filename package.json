@@ -23,6 +23,11 @@
     "db:reset": "prisma migrate reset",
     "ingest": "tsx scripts/ingest-references.ts",
     "tags:from-folders": "tsx scripts/apply-folder-path-tags.ts",
+    "tags:retrieve": "tsx scripts/retrieve-tag-source.ts",
+    "tags:deduce": "tsx scripts/deduce-tags-from-source.ts",
+    "tags:pipeline": "tsx scripts/sync-tags-pipeline.ts",
+    "tags:from-disk": "tsx scripts/sync-reference-tags-from-tagfiles.ts",
+    "sync:modelvivant": "tsx scripts/sync-modelvivant.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
@@ -41,6 +46,7 @@
     "next-auth": "5.0.0-beta.31",
     "next-themes": "^0.4.4",
     "pino": "^9.4.0",
+    "prisma": "^5.20.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-hook-form": "^7.53.0",
@@ -67,7 +73,6 @@
     "postcss": "^8.4.47",
     "prettier": "^3.3.3",
     "prettier-plugin-tailwindcss": "^0.6.8",
-    "prisma": "^5.20.0",
     "tailwindcss": "^3.4.14",
     "tsx": "^4.19.1",
     "typescript": "^5.6.3",

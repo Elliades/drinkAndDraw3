@@ -16,6 +16,7 @@ loadDotenv({ path: ".env.local", override: true });
  *   npm run ingest                # ingest from STORAGE_DRIVER
  *   npm run ingest -- --dry-run   # log only, no DB writes
  *   npm run ingest -- --prefix Hands  # only files under that key prefix
+ *   npm run ingest -- --prune         # delete DB rows whose storageKey is missing on disk (full list only)
  *
  * After ingesting (or when folder names change), derive folder-based tags for search:
  *   npm run tags:from-folders
@@ -34,18 +35,21 @@ import {
 } from "../src/domain/storage-keys";
 import { logger } from "../src/lib/logger";
 import { getEnv } from "../src/lib/env";
+import { pruneStaleReferencesUnderScope } from "./lib/reference-prune";
 
 interface CliOptions {
   dryRun: boolean;
   prefix?: string;
+  prune: boolean;
 }
 
 function parseArgs(argv: string[]): CliOptions {
-  const opts: CliOptions = { dryRun: false };
+  const opts: CliOptions = { dryRun: false, prune: false };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--dry-run") opts.dryRun = true;
     else if (arg === "--prefix") opts.prefix = argv[++i];
+    else if (arg === "--prune") opts.prune = true;
   }
   return opts;
 }
@@ -165,6 +169,19 @@ async function main() {
   }
 
   logger.info(result, "ingest done");
+
+  if (opts.prune && !opts.prefix) {
+    const diskKeys = new Set(objects.map((o) => o.key));
+    const pruneResult = await pruneStaleReferencesUnderScope({
+      diskKeys,
+      scope: {},
+      dryRun: opts.dryRun,
+    });
+    logger.info(pruneResult, "ingest prune done");
+  } else if (opts.prune && opts.prefix) {
+    logger.warn("--prune ignored when --prefix is set (run a full ingest to prune safely)");
+  }
+
   await prisma.$disconnect();
 }
 

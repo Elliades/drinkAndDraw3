@@ -44,10 +44,12 @@ Switch by changing env and restarting; no runtime toggle.
 
 ## Deployment (Railway)
 
-1. Create a Postgres add-on. Railway sets `DATABASE_URL`.
-2. Set `STORAGE_DRIVER=s3` plus AWS creds and `S3_BUCKET`.
-3. Set `AUTH_SECRET`, `NEXT_PUBLIC_APP_URL`, optional `AUTH_GOOGLE_*`.
-4. Build command: `npm run build`. Start command: `npm start`. Migrations run automatically via `prisma migrate deploy` in CI/CD.
+The repo includes `railway.json`: Nixpacks build, start command `npx prisma migrate deploy && npm start`, and health check `GET /api/health` (that route is excluded from auth middleware so probes stay lightweight).
+
+1. Add the **PostgreSQL** plugin and link it so `DATABASE_URL` is available for **both** build and deploy (Prisma client and migrations need it).
+2. Set `AUTH_SECRET` (16+ chars) and `NEXT_PUBLIC_APP_URL` to your **public HTTPS** app URL (for example `https://<service>.up.railway.app` or your custom domain). Do not leave the localhost default in production.
+3. Set `STORAGE_DRIVER=s3`, `S3_BUCKET`, and `AWS_REGION`. Put AWS access keys in the environment if you use access keys; omit them if the AWS SDK default chain applies (for example an attached IAM role elsewhere). If objects are served through a **replica or CDN** (CloudFront, second bucket, public base URL), set `S3_PUBLIC_URL` to that base URL so image URLs match where browsers load files. `next.config.ts` already allows `*.amazonaws.com` and `*.cloudfront.net` for optimized images; add another `remotePatterns` entry if your CDN hostname differs.
+4. Optional: `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` for Google sign-in. After first deploy, run `npm run ingest` (or equivalent one-off) against the same env if you need DB rows synced from storage.
 
 ## Scripts
 
