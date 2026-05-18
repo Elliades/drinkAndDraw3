@@ -27,6 +27,7 @@
     "tags:deduce": "tsx scripts/deduce-tags-from-source.ts",
     "tags:pipeline": "tsx scripts/sync-tags-pipeline.ts",
     "tags:from-disk": "tsx scripts/sync-reference-tags-from-tagfiles.ts",
+    "env:verify-prod": "tsx scripts/verify-production-env.ts",
     "sync:modelvivant": "tsx scripts/sync-modelvivant.ts",
     "postinstall": "prisma generate"
   },
@@ -75,7 +76,7 @@
     "prettier-plugin-tailwindcss": "^0.6.8",
     "tailwindcss": "^3.4.14",
     "tsx": "^4.19.1",
-    "typescript": "^5.6.3",
+    "typescript": "5.8.2",
     "vitest": "^2.1.2"
   }
 }
