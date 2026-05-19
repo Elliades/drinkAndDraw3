@@ -12,7 +12,7 @@ Set these in the Railway service **Variables** tab. Share with the build phase w
 
 | Variable | Notes |
 | -------- | ----- |
-| `DATABASE_URL` | From the PostgreSQL plugin |
+| `DATABASE_URL` | **Must** be the PostgreSQL plugin reference (e.g. `${{Postgres.DATABASE_URL}}`). Do not paste the localhost URL from `.env.example`. Enable for **Build** and **Deploy**. |
 | `NODE_ENV` | `production` |
 | `AUTH_SECRET` | 16+ characters (`openssl rand -base64 32`) |
 | `NEXT_PUBLIC_APP_URL` | Public HTTPS URL (not localhost); **required at build time** |
@@ -55,6 +55,6 @@ npm run ingest       # sync Reference rows from S3
 
 1. **Deploy branch** — In Railway → Service → Settings → Source, set the branch to **`prod/railway`** (not `0-dev`).
 2. **`NEXT_PUBLIC_APP_URL`** — Must match the service’s public HTTPS domain (e.g. `https://blissful-insight-production.up.railway.app`) and be shared with the **build** phase.
-3. **PostgreSQL** — `DATABASE_URL` must be linked to the app service for build and deploy.
+3. **PostgreSQL** — On the **app** service, set `DATABASE_URL` = `${{Postgres.DATABASE_URL}}` (or your plugin’s variable). Remove any hand-typed `localhost:5432` value. If migrate logs show `localhost:5432`, the plugin reference is missing or overridden.
 4. **Logs** — [Railway project](https://railway.com/project/49d0b83f-c59d-430a-9ed1-7a8c56511194?environmentId=f6540c17-65fa-4ff2-84b4-e5c659d8f01c); check build logs and the `prisma migrate deploy` step on start.
 5. **CI** — [GitHub Actions on `prod/railway`](https://github.com/Elliades/drinkAndDraw3/actions?query=branch%3Aprod%2Frailway) must pass before relying on a Railway deploy.
