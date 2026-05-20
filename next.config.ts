@@ -1,7 +1,9 @@
-// Ensure .env.local values always take precedence over pre-set shell environment
-// variables (Next.js doesn't override existing process.env entries on its own).
+// Load .env.local only in local development. Never override process.env in production
+// so Railway/platform DATABASE_URL and other secrets are not replaced by localhost defaults.
 import { config as loadDotenv } from "dotenv";
-loadDotenv({ path: ".env.local", override: true });
+if (process.env.NODE_ENV !== "production") {
+  loadDotenv({ path: ".env.local", override: true });
+}
 
 import type { NextConfig } from "next";
 
