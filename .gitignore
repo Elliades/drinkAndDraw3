@@ -24,3 +24,6 @@ prisma/migrations/dev.db*
 .next-env.d.ts
 *.tsbuildinfo
 scripts/.cache
+
+# Ephemeral SSH keys for cloud agent / Railway (never commit private material)
+.cursor-agent-ssh/
