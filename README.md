@@ -44,7 +44,7 @@ Switch by changing env and restarting; no runtime toggle.
 
 ## Deployment (Railway)
 
-The repo includes `railway.json`: Nixpacks build, start command `npx prisma migrate deploy && npm start`, and health check `GET /api/health` (that route is excluded from auth middleware so probes stay lightweight).
+The repo includes `railway.json`: Nixpacks build, a start command that resolves `DATABASE_URL` (see `scripts/ensure-railway-database-url.mjs`), runs `prisma migrate deploy`, seeds tags, runs `ingest`, then `npm start`, and a health check `GET /api/health` (that route is excluded from auth middleware so probes stay lightweight). To skip ingest on every boot (faster restarts), remove `npm run ingest &&` from the start command in Railway or in `railway.json`.
 
 1. Add the **PostgreSQL** plugin and link it so `DATABASE_URL` is available for **both** build and deploy (Prisma client and migrations need it).
 2. Set `AUTH_SECRET` (16+ chars) and `NEXT_PUBLIC_APP_URL` to your **public HTTPS** app URL (for example `https://<service>.up.railway.app` or your custom domain). Do not leave the localhost default in production.
