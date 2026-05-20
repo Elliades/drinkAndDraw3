@@ -5,7 +5,7 @@
     "buildCommand": "npm run build"
   },
   "deploy": {
-    "startCommand": "node scripts/ensure-railway-database-url.mjs && npx prisma migrate deploy && npm start",
+    "startCommand": "export DATABASE_URL=\"$(node scripts/ensure-railway-database-url.mjs)\" && npx prisma migrate deploy && npm run db:seed && npm run ingest && npm start",
     "healthcheckPath": "/api/health",
     "healthcheckTimeout": 100,
     "restartPolicyType": "ON_FAILURE",

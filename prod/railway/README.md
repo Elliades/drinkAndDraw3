@@ -1,6 +1,6 @@
 # Production — Railway
 
-Deploy from the **repository root** (not this folder). Config: [`railway.json`](../../railway.json).
+Deploy from the **repository root** (not this folder). Config: [`railway.json`](../../railway.json) (Nixpacks build). On start: [`scripts/ensure-railway-database-url.mjs`](../../scripts/ensure-railway-database-url.mjs) validates or assembles `DATABASE_URL`, then `prisma migrate deploy`, `db:seed`, `ingest`, and `npm start`. Health check: `GET /api/health`. To skip ingest on every boot (faster), remove `npm run ingest &&` from `railway.json` `deploy.startCommand`.
 
 ## Branch
 
@@ -42,9 +42,11 @@ NODE_ENV=production npm run env:verify-prod
 
 ## Post-deploy (one-off)
 
+By default, `railway.json` already runs `db:seed` and `ingest` on each service start. Use these only if you changed the start command or need to re-run manually:
+
 ```bash
-npm run db:seed      # if you want seed data
-npm run ingest       # sync Reference rows from S3
+npm run db:seed
+npm run ingest
 ```
 
 ## Health check
