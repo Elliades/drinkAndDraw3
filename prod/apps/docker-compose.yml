@@ -1,0 +1,60 @@
+# drinkAndDraw v3 - production stack for the `apps` mini-server (WSL + Coolify).
+# Deploy this file via Coolify (Git-based) from branch `prod/apps`.
+# Build context is the repo root (two levels up from this file).
+#
+# Secrets/values come from Coolify's Environment tab (see .env.example). Never commit real secrets.
+
+services:
+  app:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    image: drinkanddraw:prod
+    container_name: drinkanddraw-app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://apps:3081}
+      DATABASE_URL: postgresql://drinkanddraw:${POSTGRES_PASSWORD:-drinkanddraw}@db:5432/drinkanddraw
+      AUTH_SECRET: ${AUTH_SECRET}
+      STORAGE_DRIVER: local
+      LOCAL_IMAGE_DIR: /data/images
+      MODEL_VIVANT_DIR: /data/images
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      AUTH_GOOGLE_ID: ${AUTH_GOOGLE_ID:-}
+      AUTH_GOOGLE_SECRET: ${AUTH_GOOGLE_SECRET:-}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+    ports:
+      - "3081:3000"
+    volumes:
+      # Images live on the apps Windows D: drive, exposed to WSL at /mnt/d/Data/ModelVivant.
+      - /mnt/d/Data/ModelVivant:/data/images:ro
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+
+  db:
+    image: postgres:16-alpine
+    container_name: drinkanddraw-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: drinkanddraw
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-drinkanddraw}
+      POSTGRES_DB: drinkanddraw
+    volumes:
+      - drinkanddraw-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U drinkanddraw -d drinkanddraw"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  drinkanddraw-pgdata:
