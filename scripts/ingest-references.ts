@@ -35,6 +35,7 @@ import {
 } from "../src/domain/storage-keys";
 import { logger } from "../src/lib/logger";
 import { getEnv } from "../src/lib/env";
+import { ensureThumbForStorageKey, deleteThumb } from "../src/media/thumbnails";
 import { pruneStaleReferencesUnderScope } from "./lib/reference-prune";
 
 interface CliOptions {
@@ -125,6 +126,7 @@ async function ingestOne(
     const existing = await prisma.reference.findUnique({ where: { storageKey: obj.key } });
     if (!existing) {
       await prisma.reference.create({ data });
+      await ensureThumbForStorageKey(obj.key);
       return "created";
     }
     const same =
@@ -133,8 +135,12 @@ async function ingestOne(
       existing.fileSizeBytes === data.fileSizeBytes &&
       existing.width === (data.width ?? existing.width) &&
       existing.height === (data.height ?? existing.height);
-    if (same) return "unchanged";
+    if (same) {
+      await ensureThumbForStorageKey(obj.key);
+      return "unchanged";
+    }
     await prisma.reference.update({ where: { id: existing.id }, data });
+    await ensureThumbForStorageKey(obj.key, { force: true });
     return "updated";
   } catch (err) {
     logger.error({ err, key: obj.key }, "upsert failed");
@@ -178,6 +184,11 @@ async function main() {
       dryRun: opts.dryRun,
     });
     logger.info(pruneResult, "ingest prune done");
+    if (!opts.dryRun) {
+      for (const key of pruneResult.staleStorageKeys) {
+        await deleteThumb(key);
+      }
+    }
   } else if (opts.prune && opts.prefix) {
     logger.warn("--prune ignored when --prefix is set (run a full ingest to prune safely)");
   }

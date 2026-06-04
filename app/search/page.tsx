@@ -53,10 +53,10 @@ function Section({ title, items }: { title: string; items: SearchHit[] }) {
             className="group block overflow-hidden rounded border border-border bg-card"
           >
             <div className="aspect-square overflow-hidden bg-muted">
-              {hit.imageUrl ? (
+              {hit.thumbnailUrl ?? hit.imageUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={hit.imageUrl}
+                  src={hit.thumbnailUrl ?? hit.imageUrl}
                   alt={hit.title}
                   className="h-full w-full object-cover transition-transform group-hover:scale-105"
                 />

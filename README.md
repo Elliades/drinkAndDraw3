@@ -40,6 +40,8 @@ Open `http://localhost:3000`.
 | `STORAGE_DRIVER` | `local`         | Files read from `LOCAL_IMAGE_DIR`, served by `/api/files/[...path]`.              |
 | `STORAGE_DRIVER` | `s3`            | Files read from `S3_BUCKET` under `S3_PREFIX`, served via presigned URLs.         |
 
+Grid views (home, library, search) load WebP thumbnails from `THUMB_CACHE_DIR`, served by `/api/thumbs/[...path]`. Detail and practice pages use full originals via `/api/files/...`. Thumbnails are generated on sync/ingest, on first thumb request, or via `npm run thumbs:backfill`. The cache can be deleted safely; it will be rebuilt.
+
 Switch by changing env and restarting; no runtime toggle.
 
 ## Deployment (Railway)
@@ -66,3 +68,4 @@ The repo includes `railway.json`: Nixpacks build, a start command that resolves 
 | `npm run db:seed`      | Seed database                                            |
 | `npm run db:studio`    | Open Prisma Studio                                       |
 | `npm run ingest`       | Scan storage backend and populate `Reference` rows       |
+| `npm run thumbs:backfill` | Pre-generate thumbnails for all references in the DB  |

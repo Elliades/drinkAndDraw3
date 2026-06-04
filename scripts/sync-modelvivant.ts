@@ -30,6 +30,7 @@ import { prisma } from "../src/db/client";
 import { logger } from "../src/lib/logger";
 import { LocalStorageProvider } from "../src/storage/local";
 import type { StorageObject } from "../src/storage/types";
+import { ensureThumbForStorageKey, deleteThumb } from "../src/media/thumbnails";
 import { pruneStaleReferencesUnderScope, scopeWhereUnderTopLevelFolders } from "./lib/reference-prune";
 import { runSyncReferenceTagsFromTagfiles } from "./sync-reference-tags-from-tagfiles";
 
@@ -100,6 +101,7 @@ async function ingestOne(
     const existing = await prisma.reference.findUnique({ where: { storageKey: obj.key } });
     if (!existing) {
       await prisma.reference.create({ data });
+      await ensureThumbForStorageKey(obj.key);
       return "created";
     }
     const same =
@@ -108,8 +110,12 @@ async function ingestOne(
       existing.fileSizeBytes === data.fileSizeBytes &&
       existing.width === (data.width ?? existing.width) &&
       existing.height === (data.height ?? existing.height);
-    if (same) return "unchanged";
+    if (same) {
+      await ensureThumbForStorageKey(obj.key);
+      return "unchanged";
+    }
     await prisma.reference.update({ where: { id: existing.id }, data });
+    await ensureThumbForStorageKey(obj.key, { force: true });
     return "updated";
   } catch (err) {
     logger.error({ err, key: obj.key }, "upsert failed");
@@ -157,6 +163,11 @@ async function main() {
   const scope = scopeWhereUnderTopLevelFolders(topLevel);
   const pruneResult = await pruneStaleReferencesUnderScope({ diskKeys, scope, dryRun });
   logger.info(pruneResult, "sync-modelvivant: prune done");
+  if (!dryRun) {
+    for (const key of pruneResult.staleStorageKeys) {
+      await deleteThumb(key);
+    }
+  }
 
   if (skipTags) {
     logger.info("sync-modelvivant: --skip-tags, skipping tag sync");

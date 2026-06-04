@@ -206,9 +206,11 @@ async function FeedGrid() {
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={item.url}
+                      src={item.thumbnailUrl}
                       alt={item.title ?? item.filename}
                       className="h-full w-auto object-cover transition-transform duration-300 group-hover:scale-[1.04]"
+                      width={item.width ?? undefined}
+                      height={item.height ?? undefined}
                       style={
                         item.width && item.height
                           ? { aspectRatio: `${item.width}/${item.height}` }

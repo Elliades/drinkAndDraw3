@@ -47,9 +47,11 @@ function ReferenceCard({ item }: { item: ReferenceListItem }) {
       <div className="overflow-hidden bg-muted">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={item.url}
+          src={item.thumbnailUrl}
           alt={item.title ?? item.filename}
           className="block h-auto w-full transition-transform duration-300 group-hover:scale-[1.03]"
+          width={item.width ?? undefined}
+          height={item.height ?? undefined}
           style={
             item.width && item.height
               ? { aspectRatio: `${item.width}/${item.height}` }

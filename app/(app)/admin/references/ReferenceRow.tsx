@@ -9,6 +9,7 @@ export interface AdminReferenceRow {
   title: string | null;
   folderPath: string;
   url: string;
+  thumbnailUrl: string;
   userTags: string[];
   adminTags: string[];
 }
@@ -18,7 +19,7 @@ export function ReferenceRow({ ref }: { ref: AdminReferenceRow }) {
     <div className="flex flex-col gap-3 border-b border-border py-3 last:border-b-0 md:flex-row md:items-start">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={ref.url}
+        src={ref.thumbnailUrl}
         alt={ref.title ?? ref.filename}
         className="h-24 w-24 flex-none rounded border border-border object-cover"
       />

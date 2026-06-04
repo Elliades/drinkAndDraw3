@@ -27,10 +27,11 @@ describe("harmonizeToken", () => {
     expect(harmonizeToken("wide")).toBe("wide angle");
   });
 
-  it("drops pictures, plus, view", () => {
+  it("drops pictures, plus, view, part", () => {
     expect(harmonizeToken("pictures")).toBe("");
     expect(harmonizeToken("plus")).toBe("");
     expect(harmonizeToken("view")).toBe("");
+    expect(harmonizeToken("part")).toBe("");
   });
 });
 

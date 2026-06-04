@@ -27,8 +27,11 @@
     "tags:deduce": "tsx scripts/deduce-tags-from-source.ts",
     "tags:pipeline": "tsx scripts/sync-tags-pipeline.ts",
     "tags:from-disk": "tsx scripts/sync-reference-tags-from-tagfiles.ts",
+    "tags:normalize": "tsx scripts/normalize-reference-tags.ts",
+    "mcp:tags": "tsx mcp/drinkanddraw-tags/src/index.ts",
     "env:verify-prod": "tsx scripts/verify-production-env.ts",
     "sync:modelvivant": "tsx scripts/sync-modelvivant.ts",
+    "thumbs:backfill": "tsx scripts/backfill-thumbnails.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
@@ -57,6 +60,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
     "@playwright/test": "^1.48.0",
     "@testing-library/jest-dom": "^6.5.0",
     "@testing-library/react": "^16.0.1",

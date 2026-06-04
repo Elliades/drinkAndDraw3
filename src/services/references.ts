@@ -2,6 +2,7 @@ import "server-only";
 import { createHash } from "node:crypto";
 import { Prisma, TagKind } from "@prisma/client";
 import { prisma } from "@/db/client";
+import { thumbPublicUrlFromStorageKey } from "@/media/thumbnails";
 import { getStorage } from "@/storage";
 import { normalizeFolderPath } from "@/domain/folders";
 import { normalizeTagList } from "@/domain/tags";
@@ -25,7 +26,10 @@ export interface ReferenceListItem {
   title: string | null;
   filename: string;
   folderPath: string;
+  /** Full-resolution original for detail / practice. */
   url: string;
+  /** WebP thumbnail for grids and lists. */
+  thumbnailUrl: string;
   width: number | null;
   height: number | null;
   tags: string[];
@@ -110,6 +114,7 @@ async function attachUrls(
         filename: r.filename,
         folderPath: r.folderPath,
         url: await storage.getUrl(r.storageKey),
+        thumbnailUrl: thumbPublicUrlFromStorageKey(r.storageKey),
         width: r.width,
         height: r.height,
         tags: r.tags.map((t) => t.tag.name),

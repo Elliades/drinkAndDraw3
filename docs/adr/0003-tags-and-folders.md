@@ -19,6 +19,23 @@ The original `imageController.ts` had three bugs that all traced back to inconsi
 
 By making tags a separate table and folders a normalized string with explicit prefix semantics, every operation goes through the same shape. The normalization rule lives in one file (`src/domain/tags.ts`) with thorough unit tests.
 
+## Per-reference tag normalization (June 2026)
+
+After folder-level deduce / `tag.txt` sync, each reference’s USER tag set passes through
+[`src/domain/tagReferenceNormalization.ts`](../../src/domain/tagReferenceNormalization.ts):
+
+- Drop noise tag `part`.
+- Pure numeric tags (`1`, `2`, …): if `female` and/or `male` is present, replace the digit with
+  `female N` / `male N` (both compounds when both genders are present); otherwise keep the bare
+  digit and flag the reference for manual review.
+
+Management surfaces:
+
+- REST API `/api/tags/v1/*` (Bearer `TAG_API_KEY` or `X-Tag-Api-Key`).
+- MCP server [`mcp/drinkanddraw-tags/`](../../mcp/drinkanddraw-tags/README.md).
+- Admin review UI `/admin/tags/review`.
+- CLI `npm run tags:normalize`.
+
 ## Consequences
 
 - Adding a new tag-bearing entity is a 30-line migration plus a junction table — cheap.

@@ -17,7 +17,7 @@ export default async function AdminHomePage() {
   const stats = [
     { label: "References", value: refCount, href: "/admin/references" as const },
     { label: "Drawings", value: drawingCount },
-    { label: "Tags", value: tagCount },
+    { label: "Tags", value: tagCount, href: "/admin/tags/review" as const },
     { label: "Users", value: userCount },
   ];
 

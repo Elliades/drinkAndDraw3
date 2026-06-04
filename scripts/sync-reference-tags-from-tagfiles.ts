@@ -24,6 +24,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { TagKind } from "@prisma/client";
 import { normalizeFolderPath } from "../src/domain/folders";
+import { normalizeTagSetForReference } from "../src/domain/tagReferenceNormalization";
 import { normalizeTagList } from "../src/domain/tags";
 import { prisma } from "../src/db/client";
 import { logger } from "../src/lib/logger";
@@ -185,7 +186,8 @@ export async function runSyncReferenceTagsFromTagfiles(opts: {
     let wouldRows = 0;
     const sample = new Map<string, number>();
     for (const r of refs) {
-      const tags = deepestTagsForReferenceFolder(r.folderPath ?? "", albumTags);
+      const rawTags = deepestTagsForReferenceFolder(r.folderPath ?? "", albumTags);
+      const { tags } = normalizeTagSetForReference(rawTags);
       if (tags.length === 0) continue;
       wouldTagRefs += 1;
       wouldRows += tags.length;
@@ -236,7 +238,8 @@ export async function runSyncReferenceTagsFromTagfiles(opts: {
   };
 
   for (const r of refs) {
-    const tags = deepestTagsForReferenceFolder(r.folderPath ?? "", albumTags);
+    const rawTags = deepestTagsForReferenceFolder(r.folderPath ?? "", albumTags);
+    const { tags } = normalizeTagSetForReference(rawTags);
     if (tags.length === 0) continue;
     referencesTagged += 1;
     for (const tagName of tags) {

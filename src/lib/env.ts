@@ -25,6 +25,8 @@ const ServerEnvSchema = z
 
     STORAGE_DRIVER: StorageDriverSchema.default("local"),
     LOCAL_IMAGE_DIR: z.string().default("./sample-images"),
+    /** Writable cache for reference thumbnails (originals may be read-only). */
+    THUMB_CACHE_DIR: z.string().default("./.cache/thumbs"),
 
     AWS_REGION: z.string().default("us-east-1"),
     AWS_ACCESS_KEY_ID: optionalStr,

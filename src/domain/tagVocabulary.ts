@@ -9,7 +9,7 @@
 import { normalizeTagList } from "./tags";
 
 /** Whole-token drops (noise in folder names). */
-const DROP_TOKENS = new Set(["pictures", "plus", "view"]);
+const DROP_TOKENS = new Set(["pictures", "plus", "view", "part"]);
 
 /** Map lowercased token → canonical replacement (single token → one or more space-separated). */
 const TOKEN_ALIASES: Readonly<Record<string, string>> = {

@@ -14,6 +14,6 @@ export const config = {
      * Middleware here only attaches the session cookie; route-level guards
      * (requireUser / requireAdmin) enforce access.
      */
-    "/((?!api/auth|api/files|api/health|_next/static|_next/image|favicon.ico|.*\\.png|.*\\.jpg|.*\\.svg).*)",
+    "/((?!api/auth|api/files|api/thumbs|api/health|api/tags/v1|_next/static|_next/image|favicon.ico|.*\\.png|.*\\.jpg|.*\\.svg).*)",
   ],
 };

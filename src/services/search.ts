@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma } from "@/db/client";
+import { thumbPublicUrlFromStorageKey } from "@/media/thumbnails";
 import { getStorage } from "@/storage";
 import { TargetType } from "@prisma/client";
 
@@ -10,6 +11,8 @@ export interface SearchHit {
   subtitle: string;
   href: string;
   imageUrl?: string;
+  /** Grid thumbnail for references (full imageUrl kept for drawings). */
+  thumbnailUrl?: string;
 }
 
 export interface SearchResult {
@@ -81,6 +84,7 @@ export async function searchEverything(query: string): Promise<SearchResult> {
       subtitle: r.folderPath || "(root)",
       href: `/library/${r.id}`,
       imageUrl: await storage.getUrl(r.storageKey),
+      thumbnailUrl: thumbPublicUrlFromStorageKey(r.storageKey),
     })),
   );
   const drawingHits: SearchHit[] = await Promise.all(

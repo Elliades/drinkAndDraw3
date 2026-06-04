@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireAdmin } from "@/auth/guards";
 import { prisma } from "@/db/client";
+import { thumbPublicUrlFromStorageKey } from "@/media/thumbnails";
 import { getStorage } from "@/storage";
 import { TagKind, type Prisma } from "@prisma/client";
 import { normalizeFolderPath } from "@/domain/folders";
@@ -49,6 +50,7 @@ export default async function AdminReferencesPage({ searchParams }: PageProps) {
       title: r.title,
       folderPath: r.folderPath,
       url: await storage.getUrl(r.storageKey),
+      thumbnailUrl: thumbPublicUrlFromStorageKey(r.storageKey),
       userTags: r.tags.filter((t) => t.kind === TagKind.USER).map((t) => t.tag.name),
       adminTags: r.tags.filter((t) => t.kind === TagKind.ADMIN).map((t) => t.tag.name),
     })),

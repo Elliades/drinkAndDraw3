@@ -25,15 +25,17 @@ export async function pruneStaleReferencesUnderScope(opts: {
   diskKeys: ReadonlySet<string>;
   scope: Prisma.ReferenceWhereInput;
   dryRun: boolean;
-}): Promise<{ scanned: number; deleted: number }> {
+}): Promise<{ scanned: number; deleted: number; staleStorageKeys: string[] }> {
   const refs = await prisma.reference.findMany({
     where: opts.scope,
     select: { id: true, storageKey: true, folderPath: true },
   });
 
   const stale = refs.filter((r) => !opts.diskKeys.has(r.storageKey));
+  const staleStorageKeys = stale.map((r) => r.storageKey);
+
   if (stale.length === 0) {
-    return { scanned: refs.length, deleted: 0 };
+    return { scanned: refs.length, deleted: 0, staleStorageKeys: [] };
   }
 
   if (opts.dryRun) {
@@ -41,7 +43,7 @@ export async function pruneStaleReferencesUnderScope(opts: {
       { scanned: refs.length, wouldDelete: stale.length, sample: stale.slice(0, 5).map((r) => r.storageKey) },
       "[dry-run] would prune stale references",
     );
-    return { scanned: refs.length, deleted: stale.length };
+    return { scanned: refs.length, deleted: stale.length, staleStorageKeys };
   }
 
   const ids = stale.map((r) => r.id);
@@ -54,5 +56,5 @@ export async function pruneStaleReferencesUnderScope(opts: {
   }
 
   logger.info({ scanned: refs.length, deleted, staleSample: stale.slice(0, 5).map((r) => r.storageKey) }, "pruned stale references");
-  return { scanned: refs.length, deleted };
+  return { scanned: refs.length, deleted, staleStorageKeys };
 }
