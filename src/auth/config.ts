@@ -1,27 +1,15 @@
-import { PrismaAdapter } from "@auth/prisma-adapter";
 import type { NextAuthConfig } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import Google from "next-auth/providers/google";
 import { prisma } from "@/db/client";
-
-const providers: NextAuthConfig["providers"] = [];
-
-const hasGoogleCreds = !!process.env.AUTH_GOOGLE_ID && !!process.env.AUTH_GOOGLE_SECRET;
-if (hasGoogleCreds) {
-  providers.push(
-    Google({
-      clientId: process.env.AUTH_GOOGLE_ID,
-      clientSecret: process.env.AUTH_GOOGLE_SECRET,
-    }),
-  );
-}
 
 const devSecret = process.env.AUTH_DEV_SECRET;
 const allowDevCredentials =
   process.env.NODE_ENV === "development" && typeof devSecret === "string" && devSecret.length >= 8;
 
+const nodeProviders: NextAuthConfig["providers"] = [];
+
 if (allowDevCredentials) {
-  providers.push(
+  nodeProviders.push(
     Credentials({
       id: "dev",
       name: "Development",
@@ -64,14 +52,9 @@ declare module "next-auth" {
   }
 }
 
-export const authConfig = {
-  adapter: PrismaAdapter(prisma),
-  session: { strategy: "jwt" },
-  pages: {
-    signIn: "/login",
-  },
-  trustHost: true,
-  providers,
+/** Node-only Auth.js options (Prisma-backed providers and session enrichment). */
+export const nodeAuthConfig = {
+  providers: nodeProviders,
   callbacks: {
     async jwt({ token, user }) {
       if (user?.id) {
