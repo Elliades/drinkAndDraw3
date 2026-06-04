@@ -216,56 +216,73 @@ export type NormalizeAllStats = {
   dryRun: boolean;
 };
 
+const NORMALIZE_BATCH_SIZE = 400;
+
 export async function normalizeAllUserTags(opts: {
   dryRun?: boolean;
 }): Promise<NormalizeAllStats> {
   const dryRun = opts.dryRun ?? false;
-  const refs = await prisma.reference.findMany({
-    select: {
-      id: true,
-      tags: {
-        where: { kind: TagKind.USER },
-        select: { tag: { select: { name: true } } },
-      },
-    },
-  });
 
+  let referencesScanned = 0;
   let referencesUpdated = 0;
   let tagsRemoved = 0;
   let tagsAdded = 0;
   let reviewCount = 0;
 
-  for (const ref of refs) {
-    const current = ref.tags.map((t) => t.tag.name);
-    if (current.length === 0) continue;
+  let cursor: string | undefined;
+  for (;;) {
+    const batch = await prisma.reference.findMany({
+      take: NORMALIZE_BATCH_SIZE,
+      ...(cursor
+        ? { skip: 1, cursor: { id: cursor } }
+        : {}),
+      orderBy: { id: "asc" },
+      select: {
+        id: true,
+        tags: {
+          where: { kind: TagKind.USER },
+          select: { tag: { select: { name: true } } },
+        },
+      },
+    });
+    if (batch.length === 0) break;
 
-    const { tags: next, needsReview } = normalizeTagSetForReference(current);
-    if (needsReview) reviewCount += 1;
+    for (const ref of batch) {
+      referencesScanned += 1;
+      const current = ref.tags.map((t) => t.tag.name);
+      if (current.length === 0) continue;
 
-    const currentSet = new Set(current);
-    const nextSet = new Set(next);
-    const same =
-      currentSet.size === nextSet.size && [...currentSet].every((t) => nextSet.has(t));
-    if (same) continue;
+      const { tags: next, needsReview } = normalizeTagSetForReference(current);
+      if (needsReview) reviewCount += 1;
 
-    const removed = current.filter((t) => !nextSet.has(t)).length;
-    const added = next.filter((t) => !currentSet.has(t)).length;
+      const currentSet = new Set(current);
+      const nextSet = new Set(next);
+      const same =
+        currentSet.size === nextSet.size && [...currentSet].every((t) => nextSet.has(t));
+      if (same) continue;
 
-    if (!dryRun) {
-      await setReferenceTags({
-        referenceId: ref.id,
-        tagNames: next,
-        kind: TagKind.USER,
-      });
+      const removed = current.filter((t) => !nextSet.has(t)).length;
+      const added = next.filter((t) => !currentSet.has(t)).length;
+
+      if (!dryRun) {
+        await setReferenceTags({
+          referenceId: ref.id,
+          tagNames: next,
+          kind: TagKind.USER,
+        });
+      }
+
+      referencesUpdated += 1;
+      tagsRemoved += removed;
+      tagsAdded += added;
     }
 
-    referencesUpdated += 1;
-    tagsRemoved += removed;
-    tagsAdded += added;
+    cursor = batch[batch.length - 1]?.id;
+    if (batch.length < NORMALIZE_BATCH_SIZE) break;
   }
 
   return {
-    referencesScanned: refs.length,
+    referencesScanned,
     referencesUpdated,
     tagsRemoved,
     tagsAdded,
