@@ -1,14 +1,19 @@
 # drinkAndDraw v3 - production stack for the `apps` mini-server (WSL + Coolify).
 # Deploy this file via Coolify (Git-based) from branch `prod/apps`.
-# Build context is the repo root (two levels up from this file).
+#
+# Build context is the repo ROOT. Coolify runs compose with --project-directory at
+# the repo root, so relative paths resolve from there (context: ".", dockerfile at root).
+# For manual runs, invoke from the repo root with: --project-directory .
 #
 # Secrets/values come from Coolify's Environment tab (see .env.example). Never commit real secrets.
 
 services:
   app:
     build:
-      context: ../..
+      context: .
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://apps:3081}
     image: drinkanddraw:prod
     container_name: drinkanddraw-app
     restart: unless-stopped

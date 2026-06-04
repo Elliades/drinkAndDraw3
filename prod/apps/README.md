@@ -47,10 +47,10 @@ Do **not** set `AUTH_DEV_SECRET` in production.
 4. Fill **Environment** from `.env.example` -> **Deploy** -> watch **Logs** (the
    `prisma migrate deploy` step must succeed on start).
 
-Emergency / no-Coolify path (from `c:\workspace\Apps-server`):
+Emergency / no-Coolify path (run from the repo root so the build context resolves):
 
-```powershell
-./provision/apps.ps1 -Bash "cd /path/to/repo/prod/apps && docker compose up -d --build"
+```bash
+docker compose -f prod/apps/docker-compose.yml --project-directory . up -d --build
 ```
 
 ## LAN exposure (port 3081)

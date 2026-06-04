@@ -19,10 +19,11 @@ RUN npm ci
 # ---- builder: compile the Next.js standalone bundle ----
 FROM deps AS builder
 COPY . .
-# NEXT_PUBLIC_* are inlined at build time; provide a non-localhost placeholder so the
-# env validator passes during build. The runtime value comes from the container env.
+# NEXT_PUBLIC_* are inlined at build time. Accept it as a build arg (Coolify passes it);
+# fall back to the LAN URL so the env validator passes. Runtime value still comes from env.
+ARG NEXT_PUBLIC_APP_URL=http://apps:3081
 ENV NODE_ENV=production
-ENV NEXT_PUBLIC_APP_URL=http://apps:3081
+ENV NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
 RUN npx prisma generate
 RUN npm run build
 
