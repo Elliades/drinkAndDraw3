@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import { FolderOpen, Images } from "lucide-react";
+import { FolderOpen, Images, User } from "lucide-react";
 import { listFolders, listReferences, type FolderNode } from "@/services/references";
+import { listPoseTags } from "@/services/tags";
 import { Card } from "@/ui/card";
 import { LibraryInfiniteGrid } from "./LibraryInfiniteGrid";
 
@@ -70,7 +71,7 @@ export default async function LibraryPage({ searchParams }: PageProps) {
     redirect(`/library${buildLibraryQueryString({ ...params, sort: "new", seed })}`);
   }
 
-  const [result, folders] = await Promise.all([
+  const [result, folders, poseTags] = await Promise.all([
     listReferences({
       folder: params.folder,
       tags,
@@ -81,6 +82,7 @@ export default async function LibraryPage({ searchParams }: PageProps) {
       randomSeed: params.seed,
     }),
     listFolders(),
+    listPoseTags({ limit: 24 }),
   ]);
 
   const subfolders = sortSpecial ? [] : getImmediateSubfolders(folders, params.folder);
@@ -126,6 +128,58 @@ export default async function LibraryPage({ searchParams }: PageProps) {
             </Link>
           );
         })}
+        {poseTags.length > 0 ? (
+          <div className="mt-6 border-t border-border pt-4">
+            <p className="mb-2 px-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Pose tags
+            </p>
+            <Link
+              href="/search/pose"
+              className="mb-2 flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-primary transition-colors hover:bg-secondary"
+            >
+              <User className="h-3.5 w-3.5 shrink-0" />
+              Pose search
+            </Link>
+            <div className="max-h-48 space-y-0.5 overflow-y-auto">
+              {poseTags.map((t) => {
+                const label = t.name.replace(/^pose:/, "").replace(/-/g, " ");
+                const isActive = tags.includes(t.name);
+                const nextTags = isActive
+                  ? tags.filter((x) => x !== t.name)
+                  : [...tags, t.name];
+                return (
+                  <Link
+                    key={t.name}
+                    href={{
+                      pathname: "/library",
+                      query: {
+                        ...(params.folder ? { folder: params.folder } : {}),
+                        ...(params.q ? { q: params.q } : {}),
+                        tag: nextTags.length > 0 ? nextTags : undefined,
+                      },
+                    }}
+                    className={`flex items-center justify-between rounded-lg px-2 py-1 text-xs transition-colors hover:bg-secondary ${
+                      isActive ? "bg-secondary font-medium text-foreground" : "text-muted-foreground"
+                    }`}
+                  >
+                    <span className="truncate capitalize">{label}</span>
+                    <span className="ml-1 shrink-0 tabular-nums">{t.referenceCount}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          <div className="mt-6 border-t border-border pt-4">
+            <Link
+              href="/search/pose"
+              className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            >
+              <User className="h-3.5 w-3.5 shrink-0" />
+              Pose search
+            </Link>
+          </div>
+        )}
       </aside>
 
       <section className="min-w-0 space-y-6">

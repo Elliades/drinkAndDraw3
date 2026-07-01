@@ -35,6 +35,9 @@ Set from [`.env.example`](.env.example). Never commit real secrets.
 | `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` | Optional Google OAuth. |
 | `LOG_LEVEL`, `SENTRY_DSN` | Optional observability. |
 | `TAG_API_KEY` | Tag management API + MCP (`openssl rand -base64 32`). Required in production. |
+| `POSE_LLM_API_KEY` | DeepSeek (or OpenAI-compatible) key for **Describe** pose search. Optional — keyword fallback if unset. Set in Coolify **Environment**, never in Git. |
+| `POSE_LLM_BASE_URL` | Default `https://api.deepseek.com/v1` |
+| `POSE_LLM_MODEL` | Default `deepseek-chat` |
 
 `DATABASE_URL`, `STORAGE_DRIVER`, `LOCAL_IMAGE_DIR`, `MODEL_VIVANT_DIR` are fixed in compose.
 Do **not** set `AUTH_DEV_SECRET` in production.
@@ -114,6 +117,22 @@ npm run thumbs:backfill
 
 Thumbnails are also created lazily on first `/api/thumbs/...` request. Safe to delete the
 cache volume contents; they will regenerate.
+
+## Pose indexing (after deploy)
+
+Migrations run automatically on app start (`prisma migrate deploy`). To detect poses and
+build search embeddings for the full library, run the pipeline on the apps server (long-running;
+~34k images). Set `POSE_LLM_API_KEY` in Coolify first if you want LLM describe-search.
+
+```bash
+# On apps (WSL), from a machine with Apps-server provision scripts:
+# ./provision/apps.ps1 -Bash "bash /mnt/c/paas/drinkanddraw-v3/prod/apps/run-pose-pipeline.sh"
+
+# Or SSH to apps and run directly:
+bash /mnt/c/paas/drinkanddraw-v3/prod/apps/run-pose-pipeline.sh
+```
+
+Logs are written under `/mnt/c/paas/tmp/pose-pipeline-*.log`. Progress: `tail -f` that file.
 
 ## Health & verify
 

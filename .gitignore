@@ -24,3 +24,8 @@ prisma/migrations/dev.db*
 .next-env.d.ts
 *.tsbuildinfo
 scripts/.cache
+tools/pose3d/.venv/
+tools/pose3d/out-full/
+tools/pose3d/out/
+tools/pose3d/weights/
+tools/pose3d/__pycache__/

@@ -35,6 +35,7 @@ export interface ReferenceListItem {
   tags: string[];
   userTags: string[];
   adminTags: string[];
+  poseTags: string[];
 }
 
 export interface ReferenceListResult {
@@ -108,6 +109,7 @@ async function attachUrls(
     rows.map(async (r) => {
       const userTags = r.tags.filter((t) => t.kind === TagKind.USER).map((t) => t.tag.name);
       const adminTags = r.tags.filter((t) => t.kind === TagKind.ADMIN).map((t) => t.tag.name);
+      const poseTags = r.tags.filter((t) => t.kind === TagKind.POSE).map((t) => t.tag.name);
       return {
         id: r.id,
         title: r.title,
@@ -120,6 +122,7 @@ async function attachUrls(
         tags: r.tags.map((t) => t.tag.name),
         userTags,
         adminTags,
+        poseTags,
       };
     }),
   );

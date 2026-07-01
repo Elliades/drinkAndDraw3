@@ -35,6 +35,9 @@ services:
       AUTH_GOOGLE_SECRET: ${AUTH_GOOGLE_SECRET:-}
       SENTRY_DSN: ${SENTRY_DSN:-}
       TAG_API_KEY: ${TAG_API_KEY:-}
+      POSE_LLM_API_KEY: ${POSE_LLM_API_KEY:-}
+      POSE_LLM_BASE_URL: ${POSE_LLM_BASE_URL:-https://api.deepseek.com/v1}
+      POSE_LLM_MODEL: ${POSE_LLM_MODEL:-deepseek-chat}
     ports:
       - "3081:3000"
     volumes:

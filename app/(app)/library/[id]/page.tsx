@@ -42,18 +42,38 @@ export default async function ReferenceDetailPage({ params }: PageProps) {
 
         {isAdmin ? (
           <ReferenceAdminPanel reference={ref} />
-        ) : ref.tags.length > 0 ? (
-          <div>
-            <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Tags
-            </h2>
-            <div className="flex flex-wrap gap-1">
-              {ref.tags.map((t) => (
-                <Link key={t} href={{ pathname: "/library", query: { tag: t } }}>
-                  <Badge className="cursor-pointer hover:bg-primary/15">{t}</Badge>
-                </Link>
-              ))}
-            </div>
+        ) : ref.tags.length > 0 || ref.poseTags.length > 0 ? (
+          <div className="space-y-3">
+            {ref.poseTags.length > 0 ? (
+              <div>
+                <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                  Pose
+                </h2>
+                <div className="flex flex-wrap gap-1">
+                  {ref.poseTags.map((t) => (
+                    <Link key={t} href={{ pathname: "/library", query: { tag: t } }}>
+                      <Badge className="cursor-pointer bg-violet-500/10 text-violet-700 dark:text-violet-300 hover:bg-violet-500/20">
+                        {t.replace(/^pose:/, "")}
+                      </Badge>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            {ref.userTags.length > 0 || ref.adminTags.length > 0 ? (
+              <div>
+                <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                  Tags
+                </h2>
+                <div className="flex flex-wrap gap-1">
+                  {[...ref.userTags, ...ref.adminTags].map((t) => (
+                    <Link key={t} href={{ pathname: "/library", query: { tag: t } }}>
+                      <Badge className="cursor-pointer hover:bg-primary/15">{t}</Badge>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </div>
         ) : (
           <p className="text-sm text-muted-foreground">No tags yet.</p>

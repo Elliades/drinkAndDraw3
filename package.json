@@ -22,6 +22,8 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:reset": "prisma migrate reset",
     "ingest": "tsx scripts/ingest-references.ts",
+    "pose:detect": "tsx scripts/pose-detect.ts",
+    "pose:featurize": "tsx scripts/pose-featurize.ts",
     "tags:from-folders": "tsx scripts/apply-folder-path-tags.ts",
     "tags:retrieve": "tsx scripts/retrieve-tag-source.ts",
     "tags:deduce": "tsx scripts/deduce-tags-from-source.ts",

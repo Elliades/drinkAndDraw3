@@ -106,9 +106,10 @@ model Reference {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  tags      ReferenceTag[]
-  drawings  Drawing[]
-  comments  Comment[]      @relation("ReferenceComments")
+  tags           ReferenceTag[]
+  drawings       Drawing[]
+  comments       Comment[]      @relation("ReferenceComments")
+  posePrediction PosePrediction?
 
   @@index([folderPath])
   @@index([isPublic, isApproved])
@@ -134,6 +135,33 @@ model ReferenceTag {
 enum TagKind {
   USER
   ADMIN
+  POSE
+}
+
+enum PoseSource {
+  MEDIAPIPE
+  NLF
+}
+
+model PosePrediction {
+  id                  String     @id @default(cuid())
+  referenceId         String     @unique
+  source              PoseSource
+  modelVersion        String
+  featureVersion      String     @default("")
+  confidence          Float?
+  rawLandmarks2d      Json?
+  rawWorldLandmarks3d Json?
+  jointAngles         Json       @default("{}")
+  limbStates          Json       @default("{}")
+  embedding           Float[]    @default([])
+  computedAt          DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+
+  reference Reference @relation(fields: [referenceId], references: [id], onDelete: Cascade)
+
+  @@index([source])
+  @@index([computedAt])
 }
 
 // =============================================================================
