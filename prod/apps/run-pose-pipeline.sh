@@ -80,6 +80,10 @@ echo "node $(node -v) npm $(npm -v)"
 echo "=== npm ci + playwright (host) ==="
 npm ci --include=dev --quiet
 npx playwright install chromium
+if ! ldconfig -p 2>/dev/null | grep -q libnspr4; then
+  echo "=== installing Playwright system dependencies (libnspr4, etc.) ==="
+  npx playwright install-deps chromium
+fi
 
 echo "--- pose:detect ---"
 npm run pose:detect -- --base-url "$BASE_URL" "$@"
