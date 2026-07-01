@@ -12,6 +12,8 @@ interface SessionImage {
   url: string;
   folderPath: string;
   tags: string[];
+  poseDataUrl?: string | null;
+  poseMeshUrl?: string | null;
 }
 
 interface Props {
@@ -167,6 +169,8 @@ export function PracticeSessionClient({ durationSeconds, imageCount, tags }: Pro
         src={current.url}
         alt={current.title ?? current.filename}
         resetKey={current.id}
+        poseDataUrl={current.poseDataUrl}
+        poseMeshUrl={current.poseMeshUrl}
         className="mx-auto max-w-3xl"
       />
       <p className="text-center text-xs text-muted-foreground">

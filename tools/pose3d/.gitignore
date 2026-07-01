@@ -1,0 +1,25 @@
+# Local model weights / SMPL body model (licensed, downloaded per machine)
+weights/
+models/
+*.torchscript
+*.pkl
+*.npz
+*.ckpt
+
+# Generated output
+out/
+out-full/
+out-posedata/
+poc-out/
+poc-in.json
+in-full.json
+in.json
+*.glb
+out-full-export.log
+out-full-export.err.log
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/

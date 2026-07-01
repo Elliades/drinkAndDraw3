@@ -7,8 +7,13 @@ import {
 const WASM_BASE =
   "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm";
 
+// `heavy` is the most accurate of the three MediaPipe variants; the feature
+// analyzes one static image on demand, so the extra latency is acceptable.
+// Note: still point landmarks, so it cannot recover axial torsion (that is what
+// the precomputed HMR mesh path is for) - it only improves landmark/proportion
+// approximation over `lite` for the live fallback.
 const MODEL_URL =
-  "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task";
+  "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_heavy/float16/1/pose_landmarker_heavy.task";
 
 let landmarkerPromise: Promise<PoseLandmarker> | null = null;
 

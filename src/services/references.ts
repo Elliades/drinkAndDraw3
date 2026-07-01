@@ -32,6 +32,10 @@ export interface ReferenceListItem {
   thumbnailUrl: string;
   width: number | null;
   height: number | null;
+  /** Precomputed SMPL pose-data (.json) URL — drives the stick figure + rig. */
+  poseDataUrl: string | null;
+  /** Optional precomputed posed mesh (.glb) URL — debug/preview only. */
+  poseMeshUrl: string | null;
   tags: string[];
   userTags: string[];
   adminTags: string[];
@@ -100,6 +104,8 @@ async function attachUrls(
     storageKey: string;
     width: number | null;
     height: number | null;
+    poseDataKey?: string | null;
+    poseMeshKey?: string | null;
     tags: Array<{ kind: TagKind; tag: { name: string } }>;
   }>,
 ): Promise<ReferenceListItem[]> {
@@ -117,6 +123,8 @@ async function attachUrls(
         thumbnailUrl: thumbPublicUrlFromStorageKey(r.storageKey),
         width: r.width,
         height: r.height,
+        poseDataUrl: r.poseDataKey ? await storage.getUrl(r.poseDataKey) : null,
+        poseMeshUrl: r.poseMeshKey ? await storage.getUrl(r.poseMeshKey) : null,
         tags: r.tags.map((t) => t.tag.name),
         userTags,
         adminTags,

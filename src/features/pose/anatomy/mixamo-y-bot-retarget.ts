@@ -228,7 +228,7 @@ export function computeRootFacingQuaternion(
   return s.q.setFromRotationMatrix(s.m);
 }
 
-function alignAxisInParent(
+export function alignAxisInParent(
   bone: Bone | undefined,
   worldA: Vector3,
   worldB: Vector3,

@@ -1,0 +1,23 @@
+[
+  {
+    "id": "dsc00407",
+    "label": "Female 29 dynamic — DSC00407",
+    "imageUrl": "/pose-poc/images/dsc00407.jpg",
+    "poseDataUrl": "/pose-poc/data/dsc00407.json",
+    "poseMeshUrl": "/pose-poc/meshes/dsc00407.glb"
+  },
+  {
+    "id": "kurilko6384",
+    "label": "Female 25 dynamic — kurilko6384",
+    "imageUrl": "/pose-poc/images/kurilko6384.jpg",
+    "poseDataUrl": "/pose-poc/data/kurilko6384.json",
+    "poseMeshUrl": "/pose-poc/meshes/kurilko6384.glb"
+  },
+  {
+    "id": "dsc07758",
+    "label": "Female 25 poses — DSC07758",
+    "imageUrl": "/pose-poc/images/dsc07758.jpg",
+    "poseDataUrl": "/pose-poc/data/dsc07758.json",
+    "poseMeshUrl": "/pose-poc/meshes/dsc07758.glb"
+  }
+]

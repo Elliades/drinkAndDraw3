@@ -81,6 +81,10 @@ export function contentTypeFromKey(key: string): string {
       return "image/gif";
     case ".bmp":
       return "image/bmp";
+    case ".glb":
+      return "model/gltf-binary";
+    case ".gltf":
+      return "model/gltf+json";
     default:
       return "application/octet-stream";
   }

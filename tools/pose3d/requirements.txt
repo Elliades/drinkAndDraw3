@@ -1,0 +1,16 @@
+# Core dependencies for the offline pose -> GLB exporter.
+#
+# PyTorch is intentionally NOT pinned here because the correct build depends on
+# your CUDA version. Install it first, matching your driver, e.g. for CUDA 12.1:
+#
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+#
+# Then: pip install -r requirements.txt
+#
+# Model-specific packages (NLF or 4D-Humans) are installed separately - see README.md.
+
+numpy>=1.24
+pillow>=10.0
+trimesh>=4.0
+requests>=2.31
+tqdm>=4.66

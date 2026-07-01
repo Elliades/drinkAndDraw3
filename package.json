@@ -32,6 +32,10 @@
     "env:verify-prod": "tsx scripts/verify-production-env.ts",
     "sync:modelvivant": "tsx scripts/sync-modelvivant.ts",
     "thumbs:backfill": "tsx scripts/backfill-thumbnails.ts",
+    "pose3d:manifest": "tsx scripts/pose3d-export-manifest.ts",
+    "pose3d:import": "tsx scripts/pose3d-import-meshes.ts",
+    "pose-poc:prepare": "tsx scripts/pose-poc-prepare.ts",
+    "pose-poc:dev": "next dev --port 3001",
     "postinstall": "prisma generate"
   },
   "dependencies": {
@@ -39,6 +43,7 @@
     "@aws-sdk/client-s3": "^3.658.1",
     "@aws-sdk/s3-request-presigner": "^3.658.1",
     "@hookform/resolvers": "^3.9.0",
+    "@img/sharp-win32-x64": "^0.34.5",
     "@mediapipe/tasks-vision": "^0.10.35",
     "@prisma/client": "^5.20.0",
     "@react-three/drei": "^10.7.7",

@@ -103,6 +103,14 @@ model Reference {
   isPublic      Boolean  @default(true)
   isApproved    Boolean  @default(true)
   viewsCount    Int      @default(0)
+  // Precomputed parametric (SMPL) pose data for the stick figure + anatomy rig.
+  // poseDataKey: storage key of the <id>.json sidecar (pose/betas/joints) — the
+  //   primary driver of the SMPL views (null = none yet).
+  // poseMeshKey: storage key of an optional posed .glb (debug/preview only).
+  // poseStatus: null = never attempted, "ready", "no_pose", or "failed".
+  poseDataKey   String?
+  poseMeshKey   String?
+  poseStatus    String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

@@ -24,7 +24,12 @@ export default async function ReferenceDetailPage({ params }: PageProps) {
 
   return (
     <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-      <PoseAnalyzerClient src={ref.url} alt={ref.title ?? ref.filename} />
+      <PoseAnalyzerClient
+        src={ref.url}
+        alt={ref.title ?? ref.filename}
+        poseDataUrl={ref.poseDataUrl}
+        poseMeshUrl={ref.poseMeshUrl}
+      />
       <aside className="space-y-4">
         <div>
           <p className="text-xs uppercase tracking-wide text-muted-foreground">
