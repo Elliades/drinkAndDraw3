@@ -65,9 +65,16 @@ async function main() {
 
   logger.info({ count: references.length, baseUrl: opts.baseUrl }, "Starting pose detection");
 
-  const browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage();
-  await page.goto(`${opts.baseUrl}/internal/pose-harness`, { waitUntil: "networkidle" });
+  const browser = await chromium.launch({
+    headless: true,
+    args: ["--ignore-certificate-errors"],
+  });
+  const context = await browser.newContext({ ignoreHTTPSErrors: true });
+  const page = await context.newPage();
+  await page.goto(`${opts.baseUrl}/internal/pose-harness`, {
+    waitUntil: "domcontentloaded",
+    timeout: 120_000,
+  });
   await page.waitForFunction(() => window.__poseHarnessReady === true, { timeout: 120_000 });
 
   let ok = 0;
@@ -75,7 +82,8 @@ async function main() {
   let noPose = 0;
 
   for (const ref of references) {
-    const url = await storage.getUrl(ref.storageKey);
+    const path = await storage.getUrl(ref.storageKey);
+    const url = path.startsWith("http") ? path : `${opts.baseUrl}${path}`;
     try {
       const result = await page.evaluate(async (imageUrl: string) => {
         if (!window.__detectPoseFromUrl) throw new Error("harness not ready");

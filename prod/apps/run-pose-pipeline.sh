@@ -58,6 +58,10 @@ docker run --rm \
   --name drinkanddraw-pose-job \
   --network "$NETWORK" \
   -e DATABASE_URL="$DATABASE_URL" \
+  -e STORAGE_DRIVER=local \
+  -e LOCAL_IMAGE_DIR=/data/images \
+  -e NEXT_PUBLIC_APP_URL=http://app:3000 \
+  -v /mnt/d/Data/ModelVivant:/data/images:ro \
   -v drinkanddraw-playwright-cache:/root/.cache/ms-playwright \
   -v "$WORK_DIR:/work" \
   -w /work \
