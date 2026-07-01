@@ -2,11 +2,12 @@
 # Run pose detection + featurization against the live drinkanddraw stack on apps.
 # Long-running (~hours for full library). Safe to re-run (resumable).
 #
-# Usage (on apps WSL):
-#   bash prod/apps/run-pose-pipeline.sh
-#   bash prod/apps/run-pose-pipeline.sh --limit 50   # smoke test
+# Runs on the WSL host (not inside an isolated container) so Playwright can reach
+# http://127.0.0.1:3081 and read images from /mnt/d/Data/ModelVivant.
 #
-# Requires: docker, git, drinkanddraw app container running (Coolify).
+# Usage:
+#   bash prod/apps/run-pose-pipeline.sh
+#   bash prod/apps/run-pose-pipeline.sh --limit 50
 
 set -euo pipefail
 
@@ -14,6 +15,8 @@ REPO_URL="${POSE_REPO_URL:-https://github.com/Elliades/drinkAndDraw3.git}"
 BRANCH="${POSE_REPO_BRANCH:-prod/apps}"
 WORK_DIR="${POSE_WORK_DIR:-/mnt/c/paas/drinkanddraw-pose-jobs}"
 LOG_DIR="${POSE_LOG_DIR:-/mnt/c/paas/tmp}"
+IMAGE_ROOT="${POSE_IMAGE_ROOT:-/mnt/d/Data/ModelVivant}"
+BASE_URL="${POSE_BASE_URL:-http://127.0.0.1:3081}"
 
 mkdir -p "$LOG_DIR" "$WORK_DIR"
 LOG_FILE="$LOG_DIR/pose-pipeline-$(date +%Y%m%d-%H%M%S).log"
@@ -25,21 +28,21 @@ echo "extra args: $*"
 
 APP_CTN="$(docker ps --filter ancestor=drinkanddraw:prod --format '{{.Names}}' | head -1 || true)"
 if [[ -z "$APP_CTN" ]]; then
-  APP_CTN="$(docker ps --format '{{.Names}}' | grep -E '^app-.*' | head -1 || true)"
-fi
-if [[ -z "$APP_CTN" ]]; then
-  echo "ERROR: drinkanddraw app container not found. Deploy via Coolify first."
+  echo "ERROR: drinkanddraw app container not found."
   exit 1
 fi
 echo "app container: $APP_CTN"
 
-NETWORK="$(docker inspect "$APP_CTN" --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}}{{end}}')"
 DATABASE_URL="$(docker inspect "$APP_CTN" --format '{{range .Config.Env}}{{println .}}{{end}}' | grep '^DATABASE_URL=' | cut -d= -f2-)"
-if [[ -z "$NETWORK" || -z "$DATABASE_URL" ]]; then
-  echo "ERROR: could not resolve docker network or DATABASE_URL from $APP_CTN"
+if [[ -z "$DATABASE_URL" ]]; then
+  echo "ERROR: could not read DATABASE_URL from app container"
   exit 1
 fi
-echo "network: $NETWORK"
+
+if [[ ! -d "$IMAGE_ROOT" ]]; then
+  echo "ERROR: image root not found at $IMAGE_ROOT"
+  exit 1
+fi
 
 if [[ -d "$WORK_DIR/.git" ]]; then
   echo "=== updating repo ==="
@@ -51,37 +54,28 @@ else
   git clone -b "$BRANCH" "$REPO_URL" "$WORK_DIR"
 fi
 
-CLI_ARGS="$*"
+cd "$WORK_DIR"
 
-echo "=== running pose:detect + pose:featurize in job container ==="
-docker run --rm \
-  --name drinkanddraw-pose-job \
-  --network "$NETWORK" \
-  -e DATABASE_URL="$DATABASE_URL" \
-  -e STORAGE_DRIVER=local \
-  -e LOCAL_IMAGE_DIR=/data/images \
-  -e NEXT_PUBLIC_APP_URL=http://app:3000 \
-  -v /mnt/d/Data/ModelVivant:/data/images:ro \
-  -v drinkanddraw-playwright-cache:/root/.cache/ms-playwright \
-  -v "$WORK_DIR:/work" \
-  -w /work \
-  node:20-bookworm-slim \
-  bash -lc "
-    set -euo pipefail
-    apt-get update -qq
-    DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
-      git ca-certificates openssl \
-      libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 \
-      libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2 \
-      libpango-1.0-0 libcairo2 > /dev/null
-    npm ci --include=dev --quiet
-    npx playwright install chromium
-    echo '--- pose:detect ---'
-    npm run pose:detect -- --base-url http://app:3000 $CLI_ARGS
-    echo '--- pose:featurize ---'
-    npm run pose:featurize -- $CLI_ARGS
-    curl -sf -X POST http://app:3000/api/pose/invalidate-cache || true
-    echo '--- done ---'
-  "
+export DATABASE_URL
+export STORAGE_DRIVER=local
+export LOCAL_IMAGE_DIR="$IMAGE_ROOT"
+export NEXT_PUBLIC_APP_URL="${NEXT_PUBLIC_APP_URL:-http://apps:3081}"
+
+if ! command -v node >/dev/null 2>&1; then
+  echo "ERROR: node not found on WSL host. Install Node 20+."
+  exit 1
+fi
+
+echo "=== npm ci + playwright (host) ==="
+npm ci --include=dev --quiet
+npx playwright install chromium
+
+echo "--- pose:detect ---"
+npm run pose:detect -- --base-url "$BASE_URL" "$@"
+
+echo "--- pose:featurize ---"
+npm run pose:featurize -- "$@"
+
+curl -sf -X POST "$BASE_URL/api/pose/invalidate-cache" || true
 
 echo "=== pose pipeline finished $(date -Is) ==="
