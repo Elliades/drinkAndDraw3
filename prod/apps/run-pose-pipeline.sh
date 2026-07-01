@@ -39,6 +39,15 @@ if [[ -z "$DATABASE_URL" ]]; then
   exit 1
 fi
 
+DB_CTN="$(docker ps --format '{{.Names}}' | grep -E '^db-.*' | head -1 || true)"
+if [[ -n "$DB_CTN" ]]; then
+  DB_IP="$(docker inspect "$DB_CTN" --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}')"
+  if [[ -n "$DB_IP" ]]; then
+    DATABASE_URL="${DATABASE_URL/@db:5432/@${DB_IP}:5432}"
+    echo "database via $DB_CTN ($DB_IP)"
+  fi
+fi
+
 if [[ ! -d "$IMAGE_ROOT" ]]; then
   echo "ERROR: image root not found at $IMAGE_ROOT"
   exit 1
