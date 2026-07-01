@@ -62,9 +62,11 @@ export LOCAL_IMAGE_DIR="$IMAGE_ROOT"
 export NEXT_PUBLIC_APP_URL="${NEXT_PUBLIC_APP_URL:-http://apps:3081}"
 
 if ! command -v node >/dev/null 2>&1; then
-  echo "ERROR: node not found on WSL host. Install Node 20+."
-  exit 1
+  echo "=== installing Node 20 on WSL host ==="
+  curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+  apt-get install -y -qq nodejs
 fi
+echo "node $(node -v) npm $(npm -v)"
 
 echo "=== npm ci + playwright (host) ==="
 npm ci --include=dev --quiet
