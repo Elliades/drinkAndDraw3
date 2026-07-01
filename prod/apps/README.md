@@ -122,17 +122,23 @@ cache volume contents; they will regenerate.
 
 Migrations run automatically on app start (`prisma migrate deploy`). To detect poses and
 build search embeddings for the full library, run the pipeline on the apps server (long-running;
-~34k images). Set `POSE_LLM_API_KEY` in Coolify first if you want LLM describe-search.
+~34k images).
+
+**1. Set DeepSeek API key in Coolify** (once):
 
 ```bash
-# On apps (WSL), from a machine with Apps-server provision scripts:
-# ./provision/apps.ps1 -Bash "bash /mnt/c/paas/drinkanddraw-v3/prod/apps/run-pose-pipeline.sh"
-
-# Or SSH to apps and run directly:
-bash /mnt/c/paas/drinkanddraw-v3/prod/apps/run-pose-pipeline.sh
+# From dev machine (reads key from env); on apps WSL after git pull:
+POSE_LLM_API_KEY=sk-... bash prod/apps/set-pose-llm-env.sh
 ```
 
-Logs are written under `/mnt/c/paas/tmp/pose-pipeline-*.log`. Progress: `tail -f` that file.
+**2. Run indexing:**
+
+```bash
+bash prod/apps/start-pose-pipeline.sh
+# or: bash prod/apps/run-pose-pipeline.sh [--limit N]
+```
+
+Logs: `/mnt/c/paas/tmp/pose-pipeline-*.log` — `tail -f` to follow.
 
 ## Health & verify
 

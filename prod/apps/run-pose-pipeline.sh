@@ -58,7 +58,7 @@ docker run --rm \
   --name drinkanddraw-pose-job \
   --network "$NETWORK" \
   -e DATABASE_URL="$DATABASE_URL" \
-  -e NODE_ENV=production \
+  -v drinkanddraw-playwright-cache:/root/.cache/ms-playwright \
   -v "$WORK_DIR:/work" \
   -w /work \
   node:20-bookworm-slim \
@@ -70,7 +70,7 @@ docker run --rm \
       libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 \
       libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2 \
       libpango-1.0-0 libcairo2 > /dev/null
-    npm ci --quiet
+    npm ci --include=dev --quiet
     npx playwright install chromium
     echo '--- pose:detect ---'
     npm run pose:detect -- --base-url http://app:3000 $CLI_ARGS
