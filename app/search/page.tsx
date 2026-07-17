@@ -1,6 +1,6 @@
-import Link from "next/link";
-import { searchEverything, type SearchHit } from "@/services/search";
+import { searchEverything } from "@/services/search";
 import { SearchInput } from "@/ui/search-input";
+import { SearchInfiniteSection } from "./SearchInfiniteSection";
 
 interface PageProps {
   searchParams: Promise<{ q?: string }>;
@@ -13,7 +13,12 @@ export default async function SearchPage({ searchParams }: PageProps) {
   const q = params.q ?? "";
   const result = q
     ? await searchEverything(q)
-    : { references: [], drawings: [], users: [], total: 0 };
+    : {
+        references: { items: [], total: 0, page: 1, pageSize: 24, totalPages: 0 },
+        drawings: { items: [], total: 0, page: 1, pageSize: 24, totalPages: 0 },
+        users: { items: [], total: 0, page: 1, pageSize: 24, totalPages: 0 },
+        total: 0,
+      };
 
   return (
     <main className="container space-y-6 py-8">
@@ -24,89 +29,58 @@ export default async function SearchPage({ searchParams }: PageProps) {
 
       {q ? (
         <p className="text-sm text-muted-foreground">
-          {result.total} result{result.total === 1 ? "" : "s"} for{" "}
+          {result.total.toLocaleString()} match{result.total === 1 ? "" : "es"} for{" "}
           <span className="font-semibold">{q}</span>
+          {result.total > 0 ? (
+            <span>
+              {" "}
+              (
+              {[
+                result.references.total > 0
+                  ? `${result.references.total.toLocaleString()} references`
+                  : null,
+                result.drawings.total > 0
+                  ? `${result.drawings.total.toLocaleString()} drawings`
+                  : null,
+                result.users.total > 0
+                  ? `${result.users.total.toLocaleString()} users`
+                  : null,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+              )
+            </span>
+          ) : null}
         </p>
       ) : (
         <p className="text-sm text-muted-foreground">Type to search.</p>
       )}
 
-      <Section title="References" items={result.references} />
-      <Section title="Drawings" items={result.drawings} />
-      <UsersSection items={result.users} />
+      {q ? (
+        <>
+          <SearchInfiniteSection
+            title="References"
+            q={q}
+            type="REFERENCE"
+            initial={result.references}
+            variant="grid"
+          />
+          <SearchInfiniteSection
+            title="Drawings"
+            q={q}
+            type="DRAWING"
+            initial={result.drawings}
+            variant="grid"
+          />
+          <SearchInfiniteSection
+            title="Users"
+            q={q}
+            type="USER"
+            initial={result.users}
+            variant="users"
+          />
+        </>
+      ) : null}
     </main>
-  );
-}
-
-function Section({ title, items }: { title: string; items: SearchHit[] }) {
-  if (items.length === 0) return null;
-  return (
-    <section className="space-y-2">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-        {title} ({items.length})
-      </h2>
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-6">
-        {items.map((hit) => (
-          <Link
-            key={hit.id}
-            href={hit.href as `/library/${string}` | `/drawings/${string}` | `/u/${string}`}
-            className="group block overflow-hidden rounded border border-border bg-card"
-          >
-            <div className="aspect-square overflow-hidden bg-muted">
-              {hit.thumbnailUrl ?? hit.imageUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={hit.thumbnailUrl ?? hit.imageUrl}
-                  alt={hit.title}
-                  className="h-full w-full object-cover transition-transform group-hover:scale-105"
-                />
-              ) : null}
-            </div>
-            <div className="p-2">
-              <p className="line-clamp-1 text-xs font-medium">{hit.title}</p>
-              <p className="line-clamp-1 text-[10px] text-muted-foreground">{hit.subtitle}</p>
-            </div>
-          </Link>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function UsersSection({ items }: { items: SearchHit[] }) {
-  if (items.length === 0) return null;
-  return (
-    <section className="space-y-2">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-        Users ({items.length})
-      </h2>
-      <ul className="space-y-1">
-        {items.map((hit) => (
-          <li key={hit.id}>
-            <Link
-              href={hit.href as `/u/${string}`}
-              className="flex items-center gap-3 rounded border border-border bg-card p-2 hover:bg-secondary"
-            >
-              {hit.imageUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={hit.imageUrl}
-                  alt={hit.title}
-                  className="h-8 w-8 rounded-full object-cover"
-                />
-              ) : (
-                <div className="h-8 w-8 rounded-full bg-muted" />
-              )}
-              <div>
-                <p className="text-sm font-medium">{hit.title}</p>
-                {hit.subtitle ? (
-                  <p className="text-xs text-muted-foreground">{hit.subtitle}</p>
-                ) : null}
-              </div>
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </section>
   );
 }
